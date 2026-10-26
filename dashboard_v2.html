@@ -1,0 +1,2607 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIDC Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="dados_dashboard.js"></script>
+<style>
+:root {
+  /* ---------- paleta oficial Franklin Templeton ---------- */
+  --ft-blue1: #E4ECF4;
+  --ft-blue2: #AABFE2;
+  --ft-blue3: #6A95D3;
+  --ft-blue4: #3B5FC4;
+  --ft-blue:  #002E88;   /* PMS 286C */
+  --ft-blue5: #001F62;   /* PMS 2756C */
+
+  --ft-teal1: #D9F4F2;
+  --ft-teal2: #96CCC8;
+  --ft-teal3: #52A89F;
+  --ft-teal:  #1E7A75;
+  --ft-teal4: #093D44;
+
+  --ft-gray1: #EBECED;
+  --ft-gray2: #C0C3C4;
+  --ft-gray3: #939596;
+  --ft-gray4: #606668;
+  --ft-gray:  #293438;
+
+  --ft-maroon1: #FCE3E3;
+  --ft-maroon3: #B77988;
+  --ft-maroon:  #720E2D;
+
+  --ft-orange1: #FFE5D4;
+  --ft-orange3: #D87736;
+  --ft-orange:  #B2410F;
+
+  --ft-yellow1: #FFE488;
+  --ft-yellow:  #BC8A0D;
+
+  /* tema claro (padrão) */
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #f2f5f9;
+  --border: #e2e7ee;
+  --border-strong: #d2dae5;
+  --text: #15202e;
+  --text-dim: var(--ft-gray4);
+  --text-faint: var(--ft-gray3);
+  --accent: var(--ft-blue);
+  --accent-soft: var(--ft-blue1);
+  --accent-text: var(--ft-blue);
+  --success: var(--ft-teal);
+  --warn: var(--ft-orange);
+  --grid: rgba(41, 52, 56, 0.07);
+
+  /* chrome (topbar + sidebar) — sempre um tom mais escuro que o conteúdo */
+  --chrome-bg: var(--ft-gray);
+  --chrome-surface: #35424a;
+  --chrome-border: #40505a;
+  --chrome-text: #eef2f3;
+  --chrome-text-dim: #a9b4b9;
+  --chrome-text-faint: #76848a;
+  --chrome-accent-bg: #40505a;
+  --chrome-accent-text: #eef2f3;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d1217;
+  --surface: #161d24;
+  --surface-2: #1c2530;
+  --border: #2a3540;
+  --border-strong: #35424f;
+  --text: #e8edf5;
+  --text-dim: #93a2ba;
+  --text-faint: #6d7c93;
+  --accent: var(--ft-blue2);
+  --accent-soft: rgba(170, 191, 226, 0.14);
+  --accent-text: var(--ft-blue2);
+  --success: var(--ft-teal2);
+  --warn: #E79A6E;
+  --grid: rgba(232, 237, 245, 0.07);
+
+  --chrome-bg: #080c10;
+  --chrome-surface: #141b22;
+  --chrome-border: #232e38;
+  --chrome-text: #eef2f3;
+  --chrome-text-dim: #93a2ba;
+  --chrome-text-faint: #5c6b85;
+  --chrome-accent-bg: #232e38;
+  --chrome-accent-text: #eef2f3;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-display);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- topbar fixo (independente da sidebar) ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 1.25rem;
+  height: 60px;
+  min-height: 60px;
+  border-bottom: 1px solid var(--chrome-border);
+  background: var(--chrome-bg);
+}
+
+.toggle-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-surface);
+  border-radius: 6px;
+  color: var(--chrome-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toggle-btn:hover { background: var(--chrome-accent-bg); color: var(--chrome-accent-text); }
+.toggle-btn svg { width: 17px; height: 17px; }
+
+.logo-slot {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  overflow: visible;
+  margin-top: -2px; /* sobe a logo em relação ao centro do topbar */
+}
+
+.logo-slot img {
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--chrome-text-dim); white-space: nowrap; }
+.breadcrumb b { color: var(--chrome-text); font-weight: 500; }
+
+.search-wrap { flex: 1; max-width: 420px; margin-left: 0.5rem; position: relative; }
+
+.search-wrap svg {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--chrome-text-faint);
+}
+
+.search-wrap input {
+  width: 100%; background: var(--chrome-surface); border: 1px solid var(--chrome-border);
+  border-radius: 8px; padding: 8px 12px 8px 32px;
+  font-family: var(--font-display); font-size: 13px; color: var(--chrome-text);
+  outline: none; transition: border-color 0.15s;
+}
+
+.search-wrap input::placeholder { color: var(--chrome-text-faint); }
+.search-wrap input:focus { border-color: var(--chrome-text-dim); }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.env-chip {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--chrome-text-dim); border: 1px solid var(--chrome-border); background: var(--chrome-surface);
+  padding: 4px 9px; border-radius: 20px; white-space: nowrap;
+}
+
+.icon-btn {
+  width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--chrome-border);
+  background: var(--chrome-surface); color: var(--chrome-text-dim);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  position: relative;
+}
+
+.icon-btn:hover { color: var(--chrome-accent-text); border-color: var(--chrome-text-dim); }
+.icon-btn svg { width: 15px; height: 15px; }
+
+.theme-btn .icon-sun { display: block; }
+.theme-btn .icon-moon { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-btn .icon-moon { display: block; }
+
+/* ---------- corpo: sidebar + conteúdo ---------- */
+
+.body-row { flex: 1; display: flex; min-height: 0; }
+
+.sidebar {
+  width: 230px;
+  min-width: 230px;
+  background: var(--chrome-bg);
+  border-right: 1px solid var(--chrome-border);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 0;
+  overflow-y: auto;
+  transition: width 0.22s ease, min-width 0.22s ease;
+}
+
+.sidebar.collapsed { width: 64px; min-width: 64px; }
+
+.nav-section { padding: 0 0.6rem; margin-bottom: 1.25rem; }
+
+.nav-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chrome-text-faint);
+  padding: 0 0.6rem;
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.15s;
+}
+
+.sidebar.collapsed .nav-label { opacity: 0; height: 0; margin: 0; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0.6rem;
+  border-radius: 8px;
+  color: var(--chrome-text-dim);
+  font-size: 13.5px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 0.15s, color 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-display);
+}
+
+.nav-item:hover { background: var(--chrome-surface); color: var(--chrome-text); }
+
+.nav-item.active {
+  background: var(--chrome-accent-bg);
+  color: var(--chrome-accent-text);
+  font-weight: 500;
+}
+
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.nav-icon svg { width: 100%; height: 100%; }
+
+.nav-text { opacity: 1; transition: opacity 0.1s; }
+.sidebar.collapsed .nav-text { opacity: 0; width: 0; }
+.sidebar.collapsed .nav-item { justify-content: center; }
+
+.nav-section-bottom {
+  margin-top: auto;
+  margin-bottom: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--chrome-border);
+}
+
+.nav-item-logout:hover { background: rgba(224, 135, 106, 0.12); color: #e0876a; }
+
+/* ---------- main ---------- */
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.content { flex: 1; overflow-y: auto; padding: 1.75rem; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+.page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.page-title { font-size: 21px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.015em; }
+.page-sub { font-size: 13px; color: var(--text-dim); margin: 0 0 1.5rem; }
+.head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- chips de origem do dado ---------- */
+.src {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em;
+  padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+}
+.src::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.src.real { background: var(--ft-teal1); color: var(--ft-teal); }
+:root[data-theme="dark"] .src.real { background: rgba(150, 204, 200, 0.14); color: var(--ft-teal2); }
+.src.demo { background: var(--surface-2); color: var(--text-faint); }
+
+/* ---------- botões utilitários (padrão das referências) ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-dim);
+  border-radius: 8px; padding: 7px 12px; font-family: var(--font-display); font-size: 12.5px;
+  transition: all 0.14s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent-text); }
+.btn svg { width: 14px; height: 14px; }
+.btn.primary { background: var(--ft-blue); border-color: var(--ft-blue); color: #fff; }
+.btn.primary:hover { background: var(--ft-blue5); border-color: var(--ft-blue5); color: #fff; }
+:root[data-theme="dark"] .btn.primary { background: var(--ft-blue4); border-color: var(--ft-blue4); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-dim);
+  border-radius: 8px; padding: 6px 11px; font-size: 11.5px; font-family: var(--font-mono);
+}
+.pill svg { width: 13px; height: 13px; }
+
+/* ---------- abas (referência: barra de abas com ícone) ---------- */
+.tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border: 1px solid var(--border); background: var(--surface);
+  border-radius: 11px; padding: 5px; margin-bottom: 1.25rem;
+}
+.tab {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; background: none; cursor: pointer;
+  padding: 8px 13px; border-radius: 8px;
+  font-family: var(--font-display); font-size: 12.5px; color: var(--text-dim);
+  transition: background 0.14s, color 0.14s;
+  white-space: nowrap;
+}
+.tab svg { width: 14px; height: 14px; opacity: 0.85; }
+.tab:hover { background: var(--surface-2); color: var(--text); }
+.tab.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 500; }
+
+.subtab { display: none; }
+.subtab.active { display: block; }
+
+/* abas discretas (linha inferior) — usadas sobre gráficos */
+.tabs-line { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 1.1rem; }
+.tab-line {
+  border: none; background: none; cursor: pointer; padding: 9px 11px;
+  font-family: var(--font-display); font-size: 12px; color: var(--text-faint); white-space: nowrap;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.14s;
+}
+.tab-line:hover { color: var(--text); }
+.tab-line.active { color: var(--accent-text); border-bottom-color: var(--accent); font-weight: 500; }
+
+/* segmentado 3M / 6M / 12M */
+.seg { display: inline-flex; gap: 4px; }
+.seg button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim); cursor: pointer;
+  font-family: var(--font-mono); font-size: 11px; padding: 5px 11px; border-radius: 7px; transition: all 0.14s;
+}
+.seg button:hover { border-color: var(--accent); color: var(--accent-text); }
+.seg button.active { background: var(--ft-blue); border-color: var(--ft-blue); color: #fff; }
+:root[data-theme="dark"] .seg button.active { background: var(--ft-blue4); border-color: var(--ft-blue4); }
+
+/* ---------- KPIs ---------- */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+.kpi-row.five { grid-template-columns: repeat(5, 1fr); }
+
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 11px;
+  padding: 1rem 1.15rem; transition: border-color 0.14s, background 0.14s;
+}
+.kpi-card.selectable { cursor: pointer; }
+.kpi-card.selectable:hover { border-color: var(--border-strong); }
+.kpi-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+.kpi-label { font-size: 11px; color: var(--text-dim); margin-bottom: 7px; letter-spacing: 0.01em; }
+.kpi-value { font-family: var(--font-mono); font-size: 23px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -0.025em; color: var(--text); }
+.kpi-value.sm { font-size: 19px; }
+.kpi-delta { font-family: var(--font-mono); font-size: 11px; margin-top: 5px; color: var(--text-faint); }
+.kpi-delta.up { color: var(--success); }
+.kpi-delta.down { color: var(--warn); }
+.kpi-fonte { font-size: 9.5px; color: var(--text-faint); margin-top: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* ---------- painéis ---------- */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; overflow: hidden; margin-bottom: 1.25rem; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 1rem 1.2rem; }
+.panel-head.bordered { border-bottom: 1px solid var(--border); }
+.panel-head h2 { font-size: 14px; font-weight: 500; margin: 0; }
+.panel-head .sub { margin-top: 3px; }
+.panel-head .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.panel-head span.ref { font-size: 11.5px; color: var(--text-faint); font-family: var(--font-mono); }
+.panel-body { padding: 0 1.2rem 1.2rem; }
+.panel-body.pt { padding-top: 1.1rem; }
+.panel-note { font-size: 11.5px; color: var(--text-faint); padding: 0 1.2rem 1rem; margin: 0; line-height: 1.5; }
+.panel-note code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.fonte { font-size: 10px; color: var(--text-faint); letter-spacing: 0.04em; text-transform: uppercase; padding: 0 1.2rem 0.9rem; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.grid-2.wide-left { grid-template-columns: 1.45fr 1fr; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+.grid-2 .panel, .grid-3 .panel { margin-bottom: 0; }
+
+.chart-box { position: relative; height: 240px; }
+.chart-box.tall { height: 300px; }
+.chart-box.short { height: 175px; }
+
+/* ---------- barra de composição + cards de categoria (ref. "Carteira") ---------- */
+.compo-total { font-family: var(--font-mono); font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin: 2px 0 14px; }
+.compo-bar { display: flex; height: 11px; border-radius: 20px; overflow: hidden; background: var(--surface-2); gap: 2px; margin-bottom: 1rem; }
+.compo-bar i { display: block; height: 100%; border-radius: 20px; }
+.compo-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 10px; }
+.compo-card { border: 1px solid var(--border); border-radius: 9px; padding: 0.7rem 0.85rem; background: var(--surface); }
+.compo-card.dim { background: var(--surface-2); }
+.compo-card .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text); }
+.compo-card .top span { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.compo-card .top span i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.compo-card .top span em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compo-card .top b { font-family: var(--font-mono); font-weight: 500; font-size: 11.5px; color: var(--text-dim); }
+.compo-card .val { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-dim); margin-top: 5px; }
+
+/* legenda em grade (ref. donut do radar) */
+.legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 7px 14px; margin-top: 1rem; }
+.legend-grid span { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-dim); min-width: 0; }
+.legend-grid i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.legend-grid em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- tabelas ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  text-align: left; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-faint); font-weight: 500; padding: 11px 1.2rem; border-bottom: 1px solid var(--border);
+  white-space: nowrap; background: var(--surface-2);
+}
+thead th.num, tbody td.num { text-align: right; }
+tbody td { padding: 12px 1.2rem; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface-2); }
+td.name { color: var(--text); font-weight: 500; }
+td.mono, th.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.sub { font-size: 11.5px; color: var(--text-faint); display: block; font-weight: 400; margin-top: 3px; font-family: var(--font-mono); letter-spacing: -0.01em; }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: var(--font-mono); padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.badge.ok { background: var(--ft-teal1); color: var(--ft-teal); }
+.badge.warn { background: var(--ft-orange1); color: var(--ft-orange); }
+.badge.neutral { background: var(--surface-2); color: var(--text-dim); }
+:root[data-theme="dark"] .badge.ok { background: rgba(150, 204, 200, 0.14); color: var(--ft-teal2); }
+:root[data-theme="dark"] .badge.warn { background: rgba(216, 119, 54, 0.16); color: #E79A6E; }
+
+.table-wrap { overflow-x: auto; }
+
+/* ---------- seletor de fundo ---------- */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-dim);
+  border-radius: 10px; padding: 9px 14px; font-family: var(--font-display); font-size: 12.5px;
+  cursor: pointer; transition: all 0.14s; text-align: left; line-height: 1.35;
+}
+.chip:hover { border-color: var(--border-strong); color: var(--text); }
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); font-weight: 500; }
+.chip small { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-faint); margin-top: 3px; }
+.chip.active small { color: var(--accent-text); opacity: 0.75; }
+
+/* ---------- alertas ---------- */
+.flags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+.flag {
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+  background: var(--ft-orange1); color: var(--ft-orange);
+  border: 1px solid rgba(178, 65, 15, 0.2); border-radius: 9px; padding: 9px 13px;
+}
+:root[data-theme="dark"] .flag { background: rgba(216, 119, 54, 0.12); color: #E79A6E; border-color: rgba(216, 119, 54, 0.3); }
+.flag svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* ---------- ficha ---------- */
+.deflist { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem 1.5rem; }
+.deflist div { min-width: 0; }
+.deflist dt { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
+.deflist dd { margin: 0; font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+.deflist dd.mono { font-family: var(--font-mono); }
+
+/* barra de proporção */
+.stack { display: flex; height: 11px; border-radius: 20px; overflow: hidden; background: var(--surface-2); margin: 2px 0 11px; gap: 2px; }
+.stack i { display: block; height: 100%; border-radius: 20px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--text-dim); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.legend b { font-family: var(--font-mono); font-weight: 500; color: var(--text); }
+
+/* ---------- ofertas ---------- */
+.offer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.offer { border: 1px solid var(--border); border-radius: 11px; padding: 1.1rem 1.2rem; background: var(--surface); }
+.offer h3 { margin: 0 0 4px; font-size: 14px; font-weight: 500; }
+.offer p { margin: 0 0 12px; font-size: 12px; color: var(--text-faint); font-family: var(--font-mono); }
+.offer .row { display: flex; justify-content: space-between; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border); color: var(--text-dim); }
+.offer .row b { font-family: var(--font-mono); font-weight: 500; color: var(--text); }
+
+@media (max-width: 1100px) {
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2, .grid-2.wide-left { grid-template-columns: 1fr; }
+  .kpi-row, .kpi-row.five { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 760px) {
+  .content { padding: 1rem; }
+  .kpi-row, .kpi-row.five { grid-template-columns: repeat(2, 1fr); }
+  .search-wrap { display: none; }
+}
+
+/* ============ Fundos — lista ============ */
+.fundos-search-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 16px; margin-bottom: 12px;
+}
+.fundos-search-bar svg { width: 18px; height: 18px; color: var(--text-faint); flex-shrink: 0; }
+.fundos-search-bar input {
+  border: none; outline: none; background: transparent;
+  font: 400 14px/1.4 var(--font-display); color: var(--text); width: 100%;
+}
+.fundos-search-bar input::placeholder { color: var(--text-faint); }
+
+.btn-outline {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.btn-outline:hover { background: var(--surface-2); border-color: var(--border-strong); }
+
+.fundos-filters {
+  display: none; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  padding: 14px 18px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+}
+.fundos-filters.open { display: flex; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 11px; color: var(--text-faint); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.filter-group select {
+  font: 400 13px/1.4 var(--font-display); color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 6px 28px 6px 10px;
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23939596' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 8px center;
+}
+.btn-sm { font-size: 12px; padding: 6px 14px; border-radius: 7px; }
+
+.fundos-table { width: 100%; border-collapse: collapse; }
+.fundos-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  text-align: left; font-size: 12px; font-weight: 600; color: var(--text-dim);
+  padding: 10px 14px; border-bottom: 2px solid var(--border);
+  background: var(--surface); white-space: nowrap; cursor: pointer;
+  user-select: none;
+}
+.fundos-table thead th.num { text-align: right; }
+.fundos-table thead th:hover { color: var(--text); }
+.fundos-table thead th .sort-icon { display: inline-block; width: 14px; font-size: 10px; color: var(--text-faint); }
+.fundos-table thead th.asc .sort-icon::after { content: '▲'; }
+.fundos-table thead th.desc .sort-icon::after { content: '▼'; }
+
+.fundos-table tbody tr {
+  cursor: pointer; transition: background .12s;
+}
+.fundos-table tbody tr:hover { background: var(--accent-soft); }
+.fundos-table tbody td {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-size: 13.5px; color: var(--text); vertical-align: middle;
+}
+.fundos-table tbody td.nome-cell {
+  font-weight: 500; max-width: 340px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fundos-table tbody td.cnpj-cell { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
+.fundos-table tbody td.adm-cell { font-size: 12.5px; color: var(--text-dim); }
+/* adm-badge/adm-initials removidos — nome da administradora direto */
+.fundos-table tbody td.cond-cell { font-size: 12.5px; }
+.fundos-table tbody td.pl-cell {
+  text-align: right; font-family: var(--font-mono);
+  font-size: 12.5px; white-space: nowrap;
+}
+
+.fundos-paginacao {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-top: 1px solid var(--border);
+  font-size: 12.5px; color: var(--text-dim);
+}
+.fundos-paginacao .pag-info { }
+.fundos-paginacao .pag-controls { display: flex; align-items: center; gap: 4px; }
+.fundos-paginacao .pag-controls button {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; font: 500 12px var(--font-display);
+  color: var(--text-dim); cursor: pointer; min-width: 32px;
+}
+.fundos-paginacao .pag-controls button:hover { background: var(--accent-soft); color: var(--accent-text); }
+.fundos-paginacao .pag-controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.fundos-paginacao .pag-controls button:disabled { opacity: .4; cursor: default; }
+.fundos-paginacao .pag-per-page {
+  display: flex; align-items: center; gap: 6px;
+}
+.fundos-paginacao .pag-per-page select {
+  font: 400 12px var(--font-display); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px;
+  color: var(--text); cursor: pointer;
+}
+
+/* ============ Fundos — detalhe ============ */
+.fundo-detail-header {
+  display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.fundo-detail-info { flex: 1; min-width: 200px; }
+.btn-voltar {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-dim); font-weight: 500; flex-shrink: 0;
+  margin-top: 4px;
+}
+.btn-voltar:hover { background: var(--accent-soft); color: var(--accent-text); }
+.btn-voltar svg { width: 16px; height: 16px; }
+
+.fundos-detail-tabs {
+  overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding-bottom: 2px;
+}
+.fundos-detail-tabs::-webkit-scrollbar { display: none; }
+.fundos-detail-tabs .tab { font-size: 12.5px; padding: 8px 14px; white-space: nowrap; }
+
+/* Carteira grid (referência: grid 3 colunas com cards de ativos) */
+.carteira-total {
+  font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px;
+}
+.carteira-variacao { font-size: 12px; color: var(--text-faint); margin-bottom: 10px; }
+.carteira-bar {
+  display: flex; height: 6px; border-radius: 3px; overflow: hidden;
+  margin-bottom: 20px; background: var(--surface-2);
+}
+.carteira-bar i { display: block; min-width: 2px; }
+
+.carteira-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+}
+.carteira-item {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.carteira-item:nth-child(3n) { border-right: none; }
+.carteira-item .ci-dot {
+  width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+}
+.carteira-item .ci-info { flex: 1; min-width: 0; }
+.carteira-item .ci-name { font-size: 12.5px; color: var(--text-dim); margin-bottom: 2px; }
+.carteira-item .ci-value { font-size: 13px; font-family: var(--font-mono); color: var(--text); }
+.carteira-item .ci-pct {
+  font-size: 12px; font-family: var(--font-mono); color: var(--text-faint);
+  margin-left: auto; white-space: nowrap; padding-left: 8px;
+}
+
+.carteira-kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+  margin-top: 20px; border-top: 1px solid var(--border);
+}
+.carteira-kpi {
+  padding: 14px 16px; border-right: 1px solid var(--border);
+}
+.carteira-kpi:last-child { border-right: none; }
+.carteira-kpi .ck-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+.carteira-kpi .ck-value { font-size: 16px; font-weight: 600; color: var(--text); font-family: var(--font-mono); }
+.carteira-kpi .ck-delta { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+/* Tab sem dados */
+.tab-empty {
+  text-align: center; padding: 3rem 2rem; color: var(--text-faint);
+  font-size: 14px;
+}
+.tab-empty svg { width: 40px; height: 40px; margin-bottom: 12px; opacity: .4; display: block; margin-left: auto; margin-right: auto; }
+
+@media (max-width: 900px) {
+  .carteira-grid { grid-template-columns: repeat(2, 1fr); }
+  .carteira-item:nth-child(3n) { border-right: 1px solid var(--border); }
+  .carteira-item:nth-child(2n) { border-right: none; }
+  .carteira-kpis { grid-template-columns: repeat(2, 1fr); }
+  .fundo-detail-header { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="toggle-btn" id="toggleBtn" aria-label="Recolher menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+
+  <div class="logo-slot">
+    <img src="Images/Franklin_logo_black.png" alt="Franklin Templeton">
+  </div>
+
+  <div class="breadcrumb">Início &nbsp;/&nbsp; <b id="crumbLabel">Radar da indústria</b></div>
+
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" placeholder="Busque por FIDCs, instituições, cedentes...">
+  </div>
+
+  <div class="topbar-right">
+    <span class="env-chip">versão 0.4.3-alpha</span>
+    <button class="icon-btn theme-btn" id="themeBtn" aria-label="Alternar tema">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.5A8.5 8.5 0 1111.5 3a7 7 0 009.5 9.5z"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Notificações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Configurações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 005 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 5a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09A1.65 1.65 0 0015 5a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.11.35.52.7 1.51 1H21a2 2 0 010 4h-.09A1.65 1.65 0 0019.4 15z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="body-row">
+  <aside class="sidebar" id="sidebar">
+    <nav class="nav-section">
+      <div class="nav-label">Explorar</div>
+      <button class="nav-item active" data-page="radar">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></span>
+        <span class="nav-text">Radar da indústria</span>
+      </button>
+      <button class="nav-item" data-page="fundos">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
+        <span class="nav-text">Fundos</span>
+      </button>
+      <button class="nav-item" data-page="instituicoes">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-text">Instituições</span>
+      </button>
+      <button class="nav-item" data-page="cedentes">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <span class="nav-text">Cedentes</span>
+      </button>
+      <button class="nav-item" data-page="franklin-fidcs">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>
+        <span class="nav-text">Franklin FIDCs</span>
+      </button>
+    </nav>
+
+    <nav class="nav-section">
+      <div class="nav-label">Monitor</div>
+      <button class="nav-item" data-page="documentos">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3v5h5M6 3h8l6 6v12H6z"/></svg></span>
+        <span class="nav-text">Documentos</span>
+      </button>
+      <button class="nav-item" data-page="rankings">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V9m8 12V3m8 18v-6"/></svg></span>
+        <span class="nav-text">Rankings</span>
+      </button>
+      <button class="nav-item" data-page="ofertas">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9"/></svg></span>
+        <span class="nav-text">Radar de ofertas</span>
+      </button>
+      <button class="nav-item" data-page="comparador">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="16"/><rect x="14" y="4" width="7" height="16"/></svg></span>
+        <span class="nav-text">Comparador de FIDCs</span>
+      </button>
+    </nav>
+
+    <nav class="nav-section nav-section-bottom">
+      <button class="nav-item nav-item-logout" id="logoutBtn">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></span>
+        <span class="nav-text">Sair</span>
+      </button>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="content">
+
+      <!-- ============ Radar da indústria ============ -->
+      <section class="page active" id="page-radar">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Radar da indústria</h1>
+            <p class="page-sub">Monitoramento de FIDCs a partir do informe mensal da CVM — competência 09/2026</p>
+          </div>
+          <span class="src demo">escala de indústria · ilustrativo</span>
+        </div>
+
+        <div class="kpi-row five" id="radar-kpis"></div>
+
+        <div class="grid-2 wide-left" style="margin-bottom:1.25rem">
+          <div class="panel">
+            <div class="panel-body pt">
+              <div class="tabs-line" id="radar-series-tabs"></div>
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:0.9rem">
+                <div>
+                  <div style="font-size:13.5px;font-weight:500" id="radar-chart-title">Evolução — Patrimônio Líquido Total</div>
+                  <div class="sub" id="radar-chart-sub">Série mensal</div>
+                </div>
+                <div style="text-align:right">
+                  <div class="kpi-value sm" id="radar-chart-value">R$ 972 bi</div>
+                  <div class="kpi-delta up" id="radar-chart-delta">+24,24% no período</div>
+                </div>
+              </div>
+              <div class="seg" id="radar-range" style="margin-bottom:0.9rem">
+                <button data-range="3">3M</button><button data-range="6">6M</button><button class="active" data-range="12">12M</button>
+              </div>
+              <div class="chart-box"><canvas id="ch-ind-serie"></canvas></div>
+            </div>
+            <div class="fonte">Fonte: CVM · série histórica mensal</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h2>Número de FIDCs por foco de atuação</h2></div>
+            <div class="panel-body">
+              <div class="chart-box"><canvas id="ch-ind-foco"></canvas></div>
+              <div class="legend-grid" id="foco-legend"></div>
+            </div>
+            <div class="fonte">Fonte: ANBIMA</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered">
+            <div><h2>Amostra carregada do FNET</h2><div class="sub">informes 08–09/2026 processados pelo scraper</div></div>
+            <div class="meta"><span class="src real">dados reais · CVM</span></div>
+          </div>
+          <div class="panel-body pt">
+            <div class="kpi-row five" style="margin-bottom:0" id="radar-real-kpis"></div>
+          </div>
+          <p class="panel-note">Números extraídos dos XMLs de Informe Mensal Estruturado. Os blocos marcados como ilustrativos acima serão substituídos quando a base completa (~5 mil classes de FIDC) for processada.</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered">
+            <h2>FIDCs com maior variação de PDD</h2>
+            <div class="meta"><span class="ref">informe 2026-09</span><span class="src demo">ilustrativo</span></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Fundo</th><th>Setor do ativo</th><th class="num">PL (R$ mi)</th><th class="num">Subordinação</th><th class="num">Coverage ratio</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="name">Crédito Consignado XI</td><td>Consignado</td><td class="mono num">342,1</td><td class="mono num">18,4%</td><td class="mono num">1,12x</td><td><span class="badge ok">Regular</span></td></tr>
+                <tr><td class="name">Multisetorial Receivables III</td><td>Multisetorial</td><td class="mono num">118,7</td><td class="mono num">9,1%</td><td class="mono num">0,87x</td><td><span class="badge warn">Abaixo do mínimo</span></td></tr>
+                <tr><td class="name">Agro Cedentes Nordeste</td><td>Agronegócio</td><td class="mono num">276,5</td><td class="mono num">22,0%</td><td class="mono num">1,34x</td><td><span class="badge ok">Regular</span></td></tr>
+                <tr><td class="name">Precatórios Federativo II</td><td>Precatórios</td><td class="mono num">94,3</td><td class="mono num">11,6%</td><td class="mono num">0,91x</td><td><span class="badge warn">Monitorar</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Fundos ============ -->
+      <section class="page" id="page-fundos">
+
+        <!-- ===== LISTA DE FUNDOS ===== -->
+        <div id="fundos-list">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">FIDCs</h1>
+              <p class="page-sub">Explore os Fundos de Investimento em Direitos Creditórios</p>
+            </div>
+            <div class="head-actions">
+              <span class="src real">dados reais · CVM</span>
+              <button class="btn btn-outline" id="btn-filtros">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 4h18M6 8h12M9 12h6M11 16h2"/></svg>
+                Filtros
+              </button>
+            </div>
+          </div>
+
+          <div class="fundos-search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="fundos-search" placeholder="Buscar por nome ou CNPJ" autocomplete="off">
+          </div>
+
+          <div class="fundos-filters" id="fundos-filters">
+            <div class="filter-group">
+              <label>Condomínio</label>
+              <select id="filter-condominio">
+                <option value="">Todos</option>
+                <option value="ABERTO">Aberto</option>
+                <option value="FECHADO">Fechado</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Classe única</label>
+              <select id="filter-classe-unica">
+                <option value="">Todas</option>
+                <option value="SIM">Sim</option>
+                <option value="NAO">Não</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>PL mínimo</label>
+              <select id="filter-pl-min">
+                <option value="">Qualquer</option>
+                <option value="1000000">≥ R$ 1 mi</option>
+                <option value="10000000">≥ R$ 10 mi</option>
+                <option value="100000000">≥ R$ 100 mi</option>
+                <option value="500000000">≥ R$ 500 mi</option>
+                <option value="1000000000">≥ R$ 1 bi</option>
+              </select>
+            </div>
+            <button class="btn btn-sm" id="btn-limpar-filtros">Limpar filtros</button>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap">
+              <table class="fundos-table" id="fundos-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort="nome">Nome <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="cnpj">CNPJ <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="adm">Administradora <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="condominio">Condomínio <span class="sort-icon"></span></th>
+                    <th class="sortable num" data-sort="pl">PL <span class="sort-icon"></span></th>
+                  </tr>
+                </thead>
+                <tbody id="fundos-tbody"></tbody>
+              </table>
+            </div>
+            <div class="fundos-paginacao" id="fundos-paginacao"></div>
+          </div>
+        </div>
+
+        <!-- ===== DETALHE DO FUNDO ===== -->
+        <div id="fundos-detail" style="display:none">
+          <div class="fundo-detail-header">
+            <button class="btn btn-voltar" id="btn-voltar-fundos">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Voltar
+            </button>
+            <div class="fundo-detail-info">
+              <h1 class="page-title" id="fundo-detail-nome"></h1>
+              <p class="page-sub" id="fundo-detail-sub"></p>
+            </div>
+            <div class="head-actions">
+              <span class="src real">dados reais · CVM</span>
+              <button class="btn" id="btn-export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+                Baixar dados
+              </button>
+            </div>
+          </div>
+
+          <div class="tabs fundos-detail-tabs" id="fundo-detail-tabs">
+            <button class="tab active" data-dtab="visao">Visão geral</button>
+            <button class="tab" data-dtab="carteira">Carteira</button>
+            <button class="tab" data-dtab="ativo">Ativo</button>
+            <button class="tab" data-dtab="cedentes">Cedentes</button>
+            <button class="tab" data-dtab="passivo">Passivo</button>
+            <button class="tab" data-dtab="documentos">Documentos</button>
+            <button class="tab" data-dtab="prestadores">Prestadores de Serviço</button>
+            <button class="tab" data-dtab="investidores">Investidores</button>
+            <button class="tab" data-dtab="risco">Indicadores de Risco</button>
+            <button class="tab" data-dtab="invest-outros">Investimentos em outros fundos</button>
+            <button class="tab" data-dtab="ofertas">Histórico de Ofertas</button>
+          </div>
+
+          <div id="fundo-detail-content"></div>
+        </div>
+
+      </section>
+
+      <!-- ============ Instituições ============ -->
+      <section class="page" id="page-instituicoes">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Instituições</h1>
+            <p class="page-sub">Administradores, custodiantes e auditores dos fundos monitorados</p>
+          </div>
+          <span class="src real">amostra real + ranking ilustrativo</span>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Prestadores de serviço da amostra</h2><div class="meta"><span class="src real">dados reais</span></div></div>
+          <div class="table-wrap"><table id="inst-table"></table></div>
+          <p class="panel-note">Administrador vem do campo <code>NR_CNPJ_ADM</code> do informe; custodiante e auditor vêm do arquivo de registro de classes da CVM.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><h2>Ranking de administradores por PL</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+            <div class="panel-body"><div class="chart-box tall"><canvas id="ch-inst-adm"></canvas></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Participação de mercado — custódia</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+            <div class="panel-body"><div class="chart-box tall"><canvas id="ch-inst-cust"></canvas></div>
+              <div class="legend-grid" id="cust-legend"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Cedentes ============ -->
+      <section class="page" id="page-cedentes">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Cedentes</h1>
+            <p class="page-sub">Originadores com concentração relevante nos direitos creditórios</p>
+          </div>
+          <span class="src real">dados reais · CVM</span>
+        </div>
+
+        <div class="kpi-row" id="ced-kpis"></div>
+
+        <div class="grid-2" style="margin-bottom:1.25rem">
+          <div class="panel">
+            <div class="panel-head"><h2>Concentração por fundo</h2><span class="ref">% da carteira</span></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="ch-ced-conc"></canvas></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Variação do top 3 — Atlântico FIDC</h2><span class="ref">08 → 09/2026</span></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="ch-ced-var"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Cedentes divulgados</h2><span class="ref">informes 08–09/2026</span></div>
+          <div class="table-wrap"><table id="ced-table"></table></div>
+          <p class="panel-note">O informe mensal só exige divulgação individualizada de cedentes acima de 10% da carteira (Res. CVM 175, Suplemento G) — por isso a soma não fecha 100%. A razão social não consta do XML: depende de cruzamento com a base de CNPJ da Receita Federal.</p>
+        </div>
+      </section>
+
+      <!-- ============ Franklin FIDCs ============ -->
+      <section class="page" id="page-franklin-fidcs">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Franklin FIDCs</h1>
+            <p class="page-sub">Posição consolidada dos fundos sob gestão e das cotas detidas em FIDCs de terceiros</p>
+          </div>
+          <span class="src demo">ilustrativo</span>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">FIDCs em carteira</div><div class="kpi-value">23</div><div class="kpi-delta">+2 no trimestre</div></div>
+          <div class="kpi-card"><div class="kpi-label">Exposição total (R$ mi)</div><div class="kpi-value">1.284</div><div class="kpi-delta up">+4,6%</div></div>
+          <div class="kpi-card"><div class="kpi-label">Cobertura de informes</div><div class="kpi-value">21/23</div><div class="kpi-delta down">2 pendentes</div></div>
+          <div class="kpi-card"><div class="kpi-label">Fundos em alerta</div><div class="kpi-value">3</div><div class="kpi-delta down">+1 no mês</div></div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:1.25rem">
+          <div class="panel">
+            <div class="panel-head"><h2>Exposição por classe de cota</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="ch-ft-expo"></canvas></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Evolução da exposição</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="ch-ft-evol"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Posições</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+          <div class="table-wrap"><table id="ft-table"></table></div>
+        </div>
+
+        <!-- Monitoramento de FIDCs -->
+        <div class="panel" id="franklin-monitor" style="margin-top:1.25rem">
+          <div class="panel-head bordered">
+            <h2>Monitoramento de FIDCs</h2>
+            <div class="meta"><span class="src real">dados reais · FUND_DATA</span></div>
+          </div>
+          <div class="panel-body" style="padding:1rem 1.25rem">
+            <p style="margin:0 0 .75rem;color:var(--text-dim);font-size:.85rem">Importe uma lista de CNPJs (um por linha, .csv ou .txt) para monitorar FIDCs específicos. A lista persiste no navegador.</p>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
+              <input type="file" id="ft-csv-input" accept=".csv,.txt" style="display:none">
+              <button class="btn-sec" id="ft-csv-btn" style="font-size:.82rem;padding:.45rem .9rem;border-radius:.35rem;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Upload CSV
+              </button>
+              <input type="text" id="ft-cnpj-add" placeholder="Ou digite um CNPJ e pressione Enter" style="flex:1;min-width:200px;font-size:.82rem;padding:.45rem .7rem;border-radius:.35rem;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--mono)">
+              <button class="btn-sec" id="ft-add-btn" style="font-size:.82rem;padding:.45rem .9rem;border-radius:.35rem;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text)">Adicionar</button>
+              <button class="btn-sec" id="ft-clear-btn" style="font-size:.82rem;padding:.45rem .9rem;border-radius:.35rem;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-dim)">Limpar tudo</button>
+            </div>
+            <div id="ft-monitor-count" style="font-size:.8rem;color:var(--text-dim);margin-bottom:.75rem"></div>
+            <div class="table-wrap"><table id="ft-monitor-table"></table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Documentos ============ -->
+      <section class="page" id="page-documentos">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Documentos</h1>
+            <p class="page-sub">Informes mensais estruturados coletados do Fundos.NET</p>
+          </div>
+          <span class="src real">dados reais · FNET</span>
+        </div>
+
+        <div class="kpi-row" id="doc-kpis"></div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Cobertura por fundo e competência</h2><span class="ref">últimas 3 competências</span></div>
+          <div class="table-wrap"><table id="doc-cob-table"></table></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Arquivos processados</h2><span class="ref">pasta ml/</span></div>
+          <div class="table-wrap"><table id="doc-table"></table></div>
+          <p class="panel-note">Nomenclatura gerada pelo scraper: <code>&lt;cnpj&gt;_InformeMensal_&lt;MM-AAAA&gt;.xml</code>. Versão do layout XML lida do campo <code>CAB_INFORM/VERSAO</code>.</p>
+        </div>
+      </section>
+
+      <!-- ============ Rankings ============ -->
+      <section class="page" id="page-rankings">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Rankings</h1>
+            <p class="page-sub">Ordenação de FIDCs pelo critério selecionado — competência 09/2026</p>
+          </div>
+          <span class="src demo">ilustrativo</span>
+        </div>
+
+        <div class="tabs" id="rank-tabs">
+          <button class="tab active" data-rank="pl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V9m8 12V3m8 18v-6"/></svg>Maior PL</button>
+          <button class="tab" data-rank="rent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9"/></svg>Rentabilidade 12m</button>
+          <button class="tab" data-rank="inad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>Inadimplência</button>
+          <button class="tab" data-rank="sub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/></svg>Subordinação</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2 id="rank-title">Maior PL</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+          <div class="panel-body"><div class="chart-box tall"><canvas id="ch-rank"></canvas></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Tabela completa</h2><span class="ref" id="rank-ref">top 8</span></div>
+          <div class="table-wrap"><table id="rank-table"></table></div>
+        </div>
+      </section>
+
+      <!-- ============ Radar de ofertas ============ -->
+      <section class="page" id="page-ofertas">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Radar de ofertas</h1>
+            <p class="page-sub">Novas emissões e ofertas em distribuição (Res. CVM 160)</p>
+          </div>
+          <span class="src demo">ilustrativo</span>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card"><div class="kpi-label">Ofertas em andamento</div><div class="kpi-value">14</div><div class="kpi-delta up">+3 no mês</div></div>
+          <div class="kpi-card"><div class="kpi-label">Volume ofertado (R$ mi)</div><div class="kpi-value">2.340</div><div class="kpi-delta up">+18%</div></div>
+          <div class="kpi-card"><div class="kpi-label">Taxa média sênior</div><div class="kpi-value">CDI+3,1%</div><div class="kpi-delta">estável</div></div>
+          <div class="kpi-card"><div class="kpi-label">Encerram em 30d</div><div class="kpi-value">5</div><div class="kpi-delta down">prazo curto</div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2>Volume ofertado por mês</h2><div class="meta"><span class="src demo">ilustrativo</span></div></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="ch-ofertas"></canvas></div></div>
+        </div>
+
+        <div class="offer-grid" id="offer-grid"></div>
+        <p class="panel-note" style="padding-left:0">O informe mensal não traz dados de oferta — esta seção dependerá do feed de ofertas da CVM/B3 (Res. CVM 160) ou de captura dos documentos de distribuição no Fundos.NET.</p>
+      </section>
+
+      <!-- ============ Comparador ============ -->
+      <section class="page" id="page-comparador">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Comparador de FIDCs</h1>
+            <p class="page-sub">Indicadores lado a lado — competência mais recente de cada fundo</p>
+          </div>
+          <span class="src real">dados reais · CVM</span>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:1.25rem">
+          <div class="panel">
+            <div class="panel-head"><h2>Perfil de risco relativo</h2><span class="ref">0–100, normalizado</span></div>
+            <div class="panel-body"><div class="chart-box tall"><canvas id="ch-cmp-radar"></canvas></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>PL e carteira</h2><span class="ref">R$ milhões</span></div>
+            <div class="panel-body"><div class="chart-box tall"><canvas id="ch-cmp-pl"></canvas></div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head bordered"><h2>Indicadores comparados</h2><span class="ref">09/2026 · Meridiano em 08/2026</span></div>
+          <div class="table-wrap"><table id="cmp-table"></table></div>
+          <p class="panel-note">Inadimplência medida sobre o total de direitos creditórios do informe. Cobertura = PDD ÷ inadimplência. Subordinação = (subordinadas + mezanino) ÷ PL, calculada a partir de <code>DESC_SERIE_CLASSE</code>.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const FD = {"meta":{"09163026000125":{"nome":"MERIDIANO FUNDO DE INVESTIMENTO EM DIREITOS CREDITÓRIOS MULTISEGMENTOS","situacao":"Em Funcionamento Normal","custodiante":"QI CORRETORA DE TÍTULOS E VALORES MOBILIÁRIOS S.A.","auditor":"NEXT AUDITORES INDEPENDENTES S/S LTDA.","inicio":"2024-04-23","cvm":"8346","forma":"Aberto"},"09172117000127":{"nome":"FUNDO DE INVESTIMENTO EM DIREITOS CREDITÓRIOS MULTISETORIAL ÁSIA LP","situacao":"Em Funcionamento Normal","custodiante":"HEMERA DISTRIBUIDORA DE TITULOS E VALORES MOBILIARIOS LTDA","auditor":"RSM BRASIL AUDITORES INDEPENDENTES LTDA.","inicio":"2024-09-13","cvm":"15865","forma":""},"09194841000151":{"nome":"ATLÂNTICO FUNDO DE INVESTIMENTO  EM DIREITOS CREDITÓRIOS RESPONSABILIDADE LIMITADA","situacao":"Em Funcionamento Normal","custodiante":"ID CORRETORA DE TITULOS E VALORES MOBILIARIOS S.A.","auditor":"BDO RCS AUDITORES INDEPENDENTES - SOCIEDADE SIMPLES LIMITADA","inicio":"2024-10-01","cvm":"46043","forma":"Fechado"}},"informes":{"09172117000127":{"09/2026":{"cnpj":"09172117000127","compt":"09/2026","adm":"39669186000101","nm_classe":"","condominio":"FECHADO","class_unica":"NAO","pl":368489653.31,"pl_medio":377059433.81,"passivo":37154132.29,"disponib":7465027.03,"carteira":394821160.87,"ativo_total":405643785.6,"dc_aquis":41236715.87,"venc_adimpl":60603365.96,"inad":29702345.1,"pdd":49068995.19,"acao_judic":0.0,"dicred_total":236296956.78,"dicred_inad":45486562.21,"dicred_pdd":31596836.63,"cdb":70037414.35,"cotas_fif":47250073.87,"valores_mob":47250073.87,"segmentos":{"Industrial":110894369.33,"Imobiliário":22878215.48,"Comercial":82966299.3,"Serviços":94610578.8,"Agronegócio":28351287.25,"Financeiro":18498754.31},"carteira_segmt_total":358199504.47,"aging_inad":[16629307.04,7974456.13,4207471.86,6919553.06,1440963.89,2782108.6,2415773.91,2930196.14,6833566.57,23055510.11],"aging_vencer":[83151237.51,42251765.73,25844950.52,14188339.18,17302798.82,13714558.5,53851476.31,18221728.31,11388622.35,3095119.93],"cedentes":[],"cotistas_total":48.0,"cotistas_senior":41.0,"cotistas_subord":7.0,"estrutura_subord":"SIM","series":[{"tipo":"Sênior","serie":"Série 9","qt":79990.67667367,"vl_cota":686.56519177,"pl":54918814.27},{"tipo":"Sênior","serie":"Série 10","qt":56499.46019395,"vl_cota":650.1548304,"pl":36733396.96},{"tipo":"Sênior","serie":"Série 11","qt":17333.50024961,"vl_cota":1219.10349991,"pl":21131330.82},{"tipo":"Subordinada 1","serie":"","qt":20801.22334064,"vl_cota":11997.30064301,"pl":249558530.16},{"tipo":"Mezanino 1","serie":"Série 1","qt":5000.0,"vl_cota":1229.51622,"pl":6147581.1}],"rentabilidade":[{"tipo":"Sênior","serie":"Série 1","pct":0.0},{"tipo":"Sênior","serie":"Série 2","pct":0.0},{"tipo":"Sênior","serie":"Série 3","pct":0.0},{"tipo":"Sênior","serie":"Série 4","pct":0.0},{"tipo":"Sênior","serie":"Série 5","pct":0.0},{"tipo":"Sênior","serie":"Série 6","pct":0.0},{"tipo":"Sênior","serie":"Série 7","pct":0.0},{"tipo":"Sênior","serie":"Série 8","pct":0.0},{"tipo":"Sênior","serie":"Série 9","pct":1.23},{"tipo":"Sênior","serie":"Série 10","pct":1.23},{"tipo":"Sênior","serie":"Série 11","pct":1.23},{"tipo":"Subordinada 1","serie":"","pct":2.12},{"tipo":"Mezanino 1","serie":"Série 1","pct":1.31}],"liquidez":{"imediata":124752515.25,"30":84715453.96,"60":40063497.06,"90":24494603.39,"180":38447879.14,"360":49797004.14,"mais360":43372832.67},"rating":{"AA":204158998.7,"A":20525652.9,"B":47154591.5,"C":26369481.0,"D":25346213.7,"E":3098685.4,"F":1109871.0,"G":324300.9,"H":30111709.4},"amortizacao":0,"taxa_aquis":{"min":0.0,"medio":62.95,"max":66.28},"aquis_mes_qt":10190.0,"aquis_mes_vl":115962842.71},"08/2026":{"cnpj":"09172117000127","compt":"08/2026","adm":"39669186000101","nm_classe":"","condominio":"FECHADO","class_unica":"NAO","pl":379421745.97,"pl_medio":378005857.29,"passivo":19305217.56,"disponib":2549416.42,"carteira":388247077.11,"ativo_total":398726963.53,"dc_aquis":39943012.17,"venc_adimpl":56432464.6,"inad":32288619.53,"pdd":48778071.96,"acao_judic":0.0,"dicred_total":258258083.05,"dicred_inad":45000710.78,"dicred_pdd":32325581.5,"cdb":69287342.25,"cotas_fif":20758639.64,"valores_mob":20758639.64,"segmentos":{"Industrial":151603435.08,"Imobiliário":19382414.14,"Comercial":102476954.62,"Serviços":94785512.34,"Financeiro":11056432.5},"carteira_segmt_total":379304748.68,"aging_inad":[15703303.45,4872686.8,12453522.34,1870162.84,7097167.67,550055.82,2951874.78,2325223.65,6599958.46,22865374.5],"aging_vencer":[111156218.4,36862431.55,31420682.77,22194548.64,10767123.88,15885514.53,44467984.05,17691426.42,8548321.4,3021166.73],"cedentes":[],"cotistas_total":48.0,"cotistas_senior":41.0,"cotistas_subord":7.0,"estrutura_subord":"SIM","series":[{"tipo":"Sênior","serie":"Série 1","qt":79990.67667367,"vl_cota":677.81612639,"pl":54218970.61},{"tipo":"Sênior","serie":"Série 2","qt":56499.46019395,"vl_cota":641.86975089,"pl":36265294.44},{"tipo":"Sênior","serie":"Série 3","qt":17333.50024961,"vl_cota":1203.56817028,"pl":20862049.18},{"tipo":"Subordinada 1","serie":"","qt":20801.22334064,"vl_cota":12595.94663734,"pl":262011099.19},{"tipo":"Mezanino 1","serie":"Série 1","qt":5000.0,"vl_cota":1212.86651,"pl":6064332.55}],"rentabilidade":[{"tipo":"Sênior","serie":"Série 1","pct":1.3},{"tipo":"Sênior","serie":"Série 2","pct":1.3},{"tipo":"Sênior","serie":"Série 3","pct":1.3},{"tipo":"Subordinada 1","serie":"","pct":-2.0},{"tipo":"Mezanino 1","serie":"Série 1","pct":1.38}],"liquidez":{"imediata":92595398.31,"30":117479421.1,"60":35727692.39,"90":29513638.29,"180":43241985.61,"360":40692202.71,"mais360":39476625.13},"rating":{"AA":216527068.6,"A":24596656.1,"B":47144751.3,"C":30204542.7,"D":26187905.0,"E":3172782.4,"F":1099850.1,"G":324634.9,"H":30046557.7},"amortizacao":0,"taxa_aquis":{"min":0.01,"medio":64.97,"max":66.89},"aquis_mes_qt":12740.0,"aquis_mes_vl":140950133.57}},"09194841000151":{"09/2026":{"cnpj":"09194841000151","compt":"09/2026","adm":"16695922000109","nm_classe":"","condominio":"FECHADO","class_unica":"SIM","pl":134711831.03,"pl_medio":140703242.92,"passivo":22565542.29,"disponib":131212.94,"carteira":157134347.86,"ativo_total":157277373.32,"dc_aquis":155434413.0,"venc_adimpl":2028718.8,"inad":153405694.2,"pdd":0.0,"acao_judic":0.0,"dicred_total":0.0,"dicred_inad":0.0,"dicred_pdd":0.0,"cdb":562758.01,"cotas_fif":1137176.85,"valores_mob":1137176.85,"segmentos":{"Serviços":37976160.47,"Financeiro":117458252.53},"carteira_segmt_total":155434413.0,"aging_inad":[9360.16,2477.27,3522.07,5825.56,8986.76,14662.09,32693.69,17234.45,4765.06,153306167.09],"aging_vencer":[23795.02,16874.79,24764.0,20908.37,23846.13,25753.84,130568.29,205312.0,114192.43,1442703.93],"cedentes":[{"cnpj":"90400888000142","pct":35.0},{"cnpj":"05437257000129","pct":20.0},{"cnpj":"59427302000193","pct":12.0}],"cotistas_total":1.0,"cotistas_senior":1.0,"cotistas_subord":0.0,"estrutura_subord":"NAO","series":[{"tipo":"Sênior","serie":"Subclasse 1","qt":64.39189315,"vl_cota":2092061.97302183,"pl":134711831.03}],"rentabilidade":[{"tipo":"Sênior","serie":"Subclasse 1","pct":-4.04}],"liquidez":{"imediata":1268389.79,"30":35197.21,"60":16609.36,"90":24467.33,"180":68788.69,"360":121982.08,"mais360":155741938.86},"rating":null,"amortizacao":1690000.0,"taxa_aquis":{"min":47.55,"medio":100.0,"max":100.0},"aquis_mes_qt":26699.0,"aquis_mes_vl":516620.14},"08/2026":{"cnpj":"09194841000151","compt":"08/2026","adm":"16695922000109","nm_classe":"","condominio":"FECHADO","class_unica":"SIM","pl":142170543.15,"pl_medio":143657391.81,"passivo":16843790.36,"disponib":97129.98,"carteira":158903656.28,"ativo_total":159014333.51,"dc_aquis":155665229.47,"venc_adimpl":2226930.5,"inad":153438298.97,"pdd":0.0,"acao_judic":0.0,"dicred_total":0.0,"dicred_inad":0.0,"dicred_pdd":0.0,"cdb":553161.05,"cotas_fif":2685265.76,"valores_mob":2685265.76,"segmentos":{"Serviços":38004323.78,"Financeiro":117660905.69},"carteira_segmt_total":155665229.47,"aging_inad":[2488.69,3522.07,5825.56,8986.76,14662.09,10796.07,22449.79,17179.39,4319.06,153348069.49],"aging_vencer":[36992.76,18371.92,21234.52,26360.8,23661.82,23756.31,145256.97,228009.85,133727.96,1569557.59],"cedentes":[{"cnpj":"90400888000142","pct":36.0},{"cnpj":"05437257000129","pct":19.0},{"cnpj":"59427302000193","pct":11.0}],"cotistas_total":1.0,"cotistas_senior":1.0,"cotistas_subord":0.0,"estrutura_subord":"NAO","series":[{"tipo":"Sênior","serie":"Subclasse 1","qt":64.39189315,"vl_cota":2207895.06559181,"pl":142170543.15}],"rentabilidade":[{"tipo":"Sênior","serie":"Subclasse 1","pct":-1.79}],"liquidez":{"imediata":2782395.74,"30":50540.01,"60":18371.92,"90":21234.52,"180":73778.93,"360":145256.97,"mais360":155922755.42},"rating":null,"amortizacao":450000.01,"taxa_aquis":{"min":51.99,"medio":100.0,"max":100.0},"aquis_mes_qt":25875.0,"aquis_mes_vl":502584.76}},"09163026000125":{"08/2026":{"cnpj":"09163026000125","compt":"08/2026","adm":"62285390000140","nm_classe":"MERIDIANO FUNDO DE INVESTIMENTO EM DIREITOS CREDITÓRIOS MULTISEGMENTOS","condominio":"ABERTO","class_unica":"SIM","pl":81302201.74,"pl_medio":80820477.1,"passivo":1284991.41,"disponib":4897.32,"carteira":82437701.3,"ativo_total":82587193.15,"dc_aquis":76670461.35,"venc_adimpl":76607992.7,"inad":81312372.61,"pdd":81249903.96,"acao_judic":54091491.46,"dicred_total":0.0,"dicred_inad":0.0,"dicred_pdd":0.0,"cdb":0.0,"cotas_fif":5513756.25,"valores_mob":5767239.95,"segmentos":{"Financeiro":103828873.85,"Setor público":54091491.46},"carteira_segmt_total":157920365.31,"aging_inad":[62467.33,0,0,0,0,0,0,20649439.49,60600463.95,1.84],"aging_vencer":[0,0,0,16087922.6,0,3222952.86,0,0,0,57297117.24],"cedentes":[{"cnpj":"14007592000188","pct":32.74},{"cnpj":"16233389000155","pct":19.79}],"cotistas_total":3.0,"cotistas_senior":0.0,"cotistas_subord":3.0,"estrutura_subord":"SIM","series":[{"tipo":"Subordinada 1","serie":"","qt":19.20857,"vl_cota":4232600.43511828,"pl":81302201.74}],"rentabilidade":[{"tipo":"Sênior","serie":"","pct":0.0},{"tipo":"Subordinada 1","serie":"","pct":0.41}],"liquidez":{"imediata":5518653.57,"30":213.99,"60":0.0,"90":0.0,"180":9464032.77,"360":129962.5,"mais360":67474330.32},"rating":null,"amortizacao":0,"taxa_aquis":{"min":0.0,"medio":0.0,"max":0.0},"aquis_mes_qt":0.0,"aquis_mes_vl":0.0}}}};
+</script>
+
+<script>
+/* ============================================================
+   helpers
+   ============================================================ */
+var BRL0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+var BRL1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+var BRL2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function mi(v) { return (v || 0) / 1e6; }
+function fmtMi(v) { return BRL1.format(mi(v)); }
+function fmtPct(v) { return (v === null || v === undefined || !isFinite(v)) ? '—' : BRL1.format(v) + '%'; }
+function fmtCnpj(c) {
+  c = String(c || '').replace(/\D/g, '').padStart(14, '0');
+  return c.slice(0,2)+'.'+c.slice(2,5)+'.'+c.slice(5,8)+'/'+c.slice(8,12)+'-'+c.slice(12);
+}
+function curto(nome) {
+  return String(nome || '')
+    .replace(/FUNDO DE INVESTIMENTO\s+EM DIREITOS CREDIT[OÓ]RIOS/i, 'FIDC')
+    .replace(/\s+RESPONSABILIDADE LIMITADA/i, '')
+    .replace(/\s+/g, ' ').trim();
+}
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+
+/* paleta de gráficos — hierarquia da marca: FT BLUE / FT BLUE5 / FT TEAL / FT TEAL4 / FT GRAY4 + terciárias */
+function palette() {
+  return isDark()
+    ? ['#AABFE2', '#96CCC8', '#6A95D3', '#52A89F', '#3B5FC4', '#C0C3C4', '#E79A6E', '#1E7A75', '#D87736', '#B77988', '#FFE488', '#939596']
+    : ['#002E88', '#1E7A75', '#3B5FC4', '#52A89F', '#001F62', '#6A95D3', '#B2410F', '#093D44', '#D87736', '#720E2D', '#BC8A0D', '#939596'];
+}
+function hexA(hex, a) {
+  var h = hex.replace('#', '');
+  return 'rgba(' + parseInt(h.slice(0,2),16) + ',' + parseInt(h.slice(2,4),16) + ',' + parseInt(h.slice(4,6),16) + ',' + a + ')';
+}
+/* gradiente vertical para áreas (padrão das referências) */
+function areaFill(cor) {
+  return function(ctx) {
+    var chart = ctx.chart, area = chart.chartArea;
+    if (!area) return 'transparent';
+    var g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    g.addColorStop(0, hexA(cor, isDark() ? 0.34 : 0.22));
+    g.addColorStop(1, hexA(cor, 0));
+    return g;
+  };
+}
+
+var CNPJS = Object.keys(FD.informes);
+function meses(cnpj) { return Object.keys(FD.informes[cnpj]).sort(); }
+function ultimo(cnpj) { var m = meses(cnpj); return FD.informes[cnpj][m[m.length - 1]]; }
+function penultimo(cnpj) { var m = meses(cnpj); return m.length > 1 ? FD.informes[cnpj][m[m.length - 2]] : null; }
+CNPJS.sort(function(a, b) { return (ultimo(b).pl || 0) - (ultimo(a).pl || 0); });
+
+function metrics(inf) {
+  var dcTotal = (inf.dc_aquis || 0) + (inf.dicred_total || 0);
+  var inad = (inf.inad || 0) + (inf.dicred_inad || 0);
+  var pdd = (inf.pdd || 0) + (inf.dicred_pdd || 0);
+  var base = dcTotal || inf.carteira || 0;
+  var senior = 0, subord = 0;
+  (inf.series || []).forEach(function(s) {
+    if (/sênior|senior/i.test(s.tipo)) senior += s.pl || 0; else subord += s.pl || 0;
+  });
+  var plSeries = senior + subord;
+  return {
+    dcTotal: dcTotal, inad: inad, pdd: pdd,
+    inadPct: base ? (inad / base) * 100 : null,
+    cobertura: inad ? pdd / inad : null,
+    senior: senior, subord: subord,
+    subordPct: plSeries ? (subord / plSeries) * 100 : null,
+    cedTop: (inf.cedentes || []).reduce(function(a, c) { return a + (c.pct || 0); }, 0)
+  };
+}
+
+function flags(inf) {
+  var m = metrics(inf), out = [];
+  if (m.inadPct !== null && m.inadPct > 50) out.push('Inadimplência declarada em ' + fmtPct(m.inadPct) + ' dos direitos creditórios — verificar preenchimento do informe.');
+  if (m.inad > 0 && m.pdd === 0) out.push('Inadimplência de R$ ' + fmtMi(m.inad) + ' mi com PDD zerada — provisão não reconhecida no informe.');
+  if (m.cobertura !== null && m.cobertura > 0.95 && m.inadPct > 80) out.push('PDD cobre praticamente toda a carteira (' + BRL2.format(m.cobertura) + 'x) — fundo em estresse severo.');
+  if (m.cedTop >= 50) out.push('Top cedentes divulgados somam ' + fmtPct(m.cedTop) + ' da carteira — concentração relevante.');
+  return out;
+}
+
+/* ============================================================
+   Chart.js — defaults no padrão visual das referências
+   ============================================================ */
+var charts = {};
+function destroy(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function baseOpts(extra) {
+  var faint = css('--text-faint'), grid = css('--grid');
+  var o = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 450 },
+    layout: { padding: { top: 4 } },
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: css('--text-dim'), font: { family: "'Space Grotesk', sans-serif", size: 11.5 },
+                  boxWidth: 7, boxHeight: 7, usePointStyle: true, pointStyle: 'circle', padding: 16 }
+      },
+      tooltip: {
+        backgroundColor: css('--surface'),
+        titleColor: css('--text'),
+        bodyColor: css('--text-dim'),
+        borderColor: css('--border-strong'),
+        borderWidth: 1,
+        titleFont: { family: "'Space Grotesk', sans-serif", size: 12, weight: '600' },
+        bodyFont: { family: "'IBM Plex Mono', monospace", size: 11.5 },
+        padding: 11, cornerRadius: 8, displayColors: true, boxWidth: 7, boxHeight: 7, usePointStyle: true, boxPadding: 4
+      }
+    },
+    scales: {
+      x: { ticks: { color: faint, font: { family: "'IBM Plex Mono', monospace", size: 10.5 }, maxRotation: 0, autoSkipPadding: 14 },
+           grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: faint, font: { family: "'IBM Plex Mono', monospace", size: 10.5 }, padding: 6 },
+           grid: { color: grid, drawTicks: false, borderDash: [4, 4] }, border: { display: false } }
+    },
+    elements: { bar: { borderRadius: 4, borderSkipped: false }, point: { radius: 0, hoverRadius: 5, hitRadius: 14 }, line: { borderWidth: 2, tension: 0.35 } }
+  };
+  return deepMerge(o, extra || {});
+}
+function deepMerge(a, b) {
+  var out = {}, k;
+  for (k in a) out[k] = (a[k] && typeof a[k] === 'object' && !Array.isArray(a[k]) && typeof a[k] !== 'function') ? deepMerge(a[k], {}) : a[k];
+  for (k in b) {
+    if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && typeof b[k] !== 'function') out[k] = deepMerge(out[k] || {}, b[k]);
+    else out[k] = b[k];
+  }
+  return out;
+}
+function mk(id, cfg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  destroy(id);
+  charts[id] = new Chart(el.getContext('2d'), cfg);
+}
+function kpi(label, value, delta, cls, fonte) {
+  return '<div class="kpi-card"><div class="kpi-label">' + label + '</div>' +
+         '<div class="kpi-value sm">' + value + '</div>' +
+         '<div class="kpi-delta ' + (cls || '') + '">' + (delta || '') + '</div>' +
+         (fonte ? '<div class="kpi-fonte">' + fonte + '</div>' : '') + '</div>';
+}
+function legendGrid(labels, cores, valores) {
+  return labels.map(function(l, i) {
+    return '<span><i style="background:' + cores[i % cores.length] + '"></i><em>' + l + (valores ? ' · ' + valores[i] : '') + '</em></span>';
+  }).join('');
+}
+
+/* ============================================================
+   dados ilustrativos (escala de indústria)
+   ============================================================ */
+var DEMO = {
+  meses: ['out/25','nov/25','dez/25','jan/26','fev/26','mar/26','abr/26','mai/26','jun/26','jul/26','ago/26','set/26'],
+  series: {
+    pl:    { titulo: 'Patrimônio Líquido Total', valor: 'R$ 972 bi', delta: '+24,24% no período', unidade: 'R$ bi',
+             dados: [782, 798, 812, 829, 847, 861, 878, 896, 913, 934, 952, 972] },
+    fundos:{ titulo: 'Número de Fundos', valor: '4.658', delta: '+21,42% no período', unidade: 'fundos',
+             dados: [3837, 3902, 3975, 4041, 4112, 4186, 4254, 4321, 4398, 4482, 4571, 4658] },
+    cotistas:{ titulo: 'Número de cotistas', valor: '509.813', delta: '+33,00% no período', unidade: 'cotistas',
+             dados: [383318, 392140, 404512, 416880, 428114, 437902, 449318, 461204, 472880, 486112, 497640, 509813] },
+    adm:   { titulo: 'Número de administradores', valor: '54', delta: '+3,85% no período', unidade: 'administradores',
+             dados: [52, 52, 52, 53, 53, 53, 53, 54, 54, 54, 54, 54] },
+    gest:  { titulo: 'Número de gestores', valor: '493', delta: '+13,33% no período', unidade: 'gestores',
+             dados: [435, 440, 446, 452, 458, 462, 468, 473, 479, 484, 489, 493] }
+  },
+  foco: {
+    labels: ['Multicarteira Outros','Fomento Mercantil','Poder Público','Recebíveis Comerciais','Crédito Consignado','Multicarteira Financeiro','Crédito Pessoal','Multicarteira Agro, Indústria e Comércio','Agronegócio','Recuperação','Crédito Imobiliário','Não se Aplica','Crédito Corporativo','Infraestrutura','Financiamento de Veículos','Outros'],
+    valores: [1486, 612, 404, 338, 291, 254, 212, 188, 161, 140, 124, 112, 98, 84, 71, 83]
+  },
+  admNomes: ['BRL Trust','Oliveira Trust','Singulare','S3 Caceis','Vórtx','Banco Daycoval','Planner','BTG Pactual'],
+  admPl:    [38.4, 31.2, 24.9, 19.8, 17.3, 12.6, 9.4, 7.8],
+  custNomes:['BTG Pactual','Daycoval','Banco Paulista','QI Corretora','Hemera','Outros'],
+  custShare:[26, 19, 14, 12, 9, 20],
+  ftClasses:['Sênior','Mezanino','Subordinada'],
+  ftExpo:   [812, 331, 141],
+  ftMeses:  ['abr/26','mai/26','jun/26','jul/26','ago/26','set/26'],
+  ftEvol:   [1092, 1114, 1158, 1203, 1227, 1284],
+  ftPos: [
+    ['FIDC Consignado Master XI','Sênior','214,8','CDI+2,8%','1,24x','ok','Regular'],
+    ['FIDC Multisetorial Vertex II','Mezanino','138,2','CDI+5,1%','0,98x','warn','Monitorar'],
+    ['FIDC Agro Cedentes Centro-Oeste','Sênior','126,4','IPCA+7,2%','1,41x','ok','Regular'],
+    ['FIDC Recebíveis Comerciais IV','Sênior','98,7','CDI+3,0%','1,18x','ok','Regular'],
+    ['FIDC Crédito Corporativo Delta','Subordinada','74,1','—','0,76x','warn','Abaixo do mínimo'],
+    ['FIDC Fomento Mercantil III','Sênior','63,9','CDI+3,4%','1,09x','ok','Regular']
+  ],
+  rank: {
+    pl:   { titulo: 'Maior PL', unidade: 'R$ mi', nomes: ['Consignado Master XI','Infra Energia II','Multisetorial Vertex II','Agro Centro-Oeste','Crédito Corporativo Delta','Recebíveis Comerciais IV','Fomento Mercantil III','Precatórios Federativo II'], valores: [1842, 1416, 1138, 964, 877, 742, 668, 594] },
+    rent: { titulo: 'Rentabilidade 12m (classe sênior)', unidade: '%', nomes: ['Precatórios Federativo II','Crédito Corporativo Delta','Multisetorial Vertex II','Fomento Mercantil III','Agro Centro-Oeste','Recebíveis Comerciais IV','Infra Energia II','Consignado Master XI'], valores: [18.4, 17.1, 16.2, 15.8, 14.9, 14.1, 13.4, 12.8] },
+    inad: { titulo: 'Inadimplência sobre carteira', unidade: '%', nomes: ['Crédito Corporativo Delta','Multisetorial Vertex II','Fomento Mercantil III','Precatórios Federativo II','Recebíveis Comerciais IV','Agro Centro-Oeste','Infra Energia II','Consignado Master XI'], valores: [19.8, 14.2, 11.6, 9.9, 7.4, 5.1, 3.8, 2.2] },
+    sub:  { titulo: 'Nível de subordinação', unidade: '%', nomes: ['Agro Centro-Oeste','Consignado Master XI','Infra Energia II','Recebíveis Comerciais IV','Precatórios Federativo II','Fomento Mercantil III','Multisetorial Vertex II','Crédito Corporativo Delta'], valores: [28.4, 24.1, 22.7, 19.3, 16.8, 13.2, 9.1, 6.4] }
+  },
+  ofertasMeses: ['abr/26','mai/26','jun/26','jul/26','ago/26','set/26'],
+  ofertasVol:   [1180, 1640, 1395, 1870, 1982, 2340],
+  ofertas: [
+    { nome: 'FIDC Consignado Master XII', serie: '1ª série sênior', vol: '450,0', taxa: 'CDI+2,9%', sub: '22,0%', prazo: '36 meses', status: 'Em distribuição' },
+    { nome: 'FIDC Agro Safra Centro-Oeste', serie: '2ª série sênior', vol: '320,0', taxa: 'IPCA+7,4%', sub: '30,0%', prazo: '48 meses', status: 'Encerra em 12d' },
+    { nome: 'FIDC Recebíveis Comerciais V', serie: 'Mezanino', vol: '180,0', taxa: 'CDI+5,6%', sub: '14,5%', prazo: '24 meses', status: 'Em distribuição' },
+    { nome: 'FIDC Infra Energia III', serie: '1ª série sênior', vol: '600,0', taxa: 'IPCA+6,8%', sub: '25,0%', prazo: '60 meses', status: 'Encerra em 27d' }
+  ]
+};
+
+/* ============================================================
+   Radar da indústria
+   ============================================================ */
+var radarSerie = 'pl', radarRange = 12;
+
+function renderRadar() {
+  var p = palette(), S = DEMO.series;
+
+  /* KPIs (o selecionado controla o gráfico, como na referência) */
+  var defs = [
+    ['pl', 'Patrimônio Líquido Total', S.pl.valor, S.pl.delta],
+    ['fundos', 'Número de Fundos', S.fundos.valor, S.fundos.delta],
+    ['cotistas', 'Número de cotistas', S.cotistas.valor, S.cotistas.delta],
+    ['adm', 'Número de administradores', S.adm.valor, S.adm.delta],
+    ['gest', 'Número de gestores', S.gest.valor, S.gest.delta]
+  ];
+  document.getElementById('radar-kpis').innerHTML = defs.map(function(d) {
+    return '<div class="kpi-card selectable' + (d[0] === radarSerie ? ' selected' : '') + '" data-serie="' + d[0] + '">' +
+      '<div class="kpi-label">' + d[1] + '</div>' +
+      '<div class="kpi-value sm">' + d[2] + '</div>' +
+      '<div class="kpi-delta up">▲ ' + d[3] + '</div>' +
+      '<div class="kpi-fonte">Fonte: CVM</div></div>';
+  }).join('');
+  document.querySelectorAll('#radar-kpis .kpi-card').forEach(function(c) {
+    c.addEventListener('click', function() { radarSerie = c.dataset.serie; renderRadar(); });
+  });
+
+  /* abas de série sobre o gráfico */
+  document.getElementById('radar-series-tabs').innerHTML = defs.map(function(d) {
+    return '<button class="tab-line' + (d[0] === radarSerie ? ' active' : '') + '" data-serie="' + d[0] + '">' + d[1] + '</button>';
+  }).join('');
+  document.querySelectorAll('#radar-series-tabs .tab-line').forEach(function(b) {
+    b.addEventListener('click', function() { radarSerie = b.dataset.serie; renderRadar(); });
+  });
+
+  document.querySelectorAll('#radar-range button').forEach(function(b) {
+    b.classList.toggle('active', Number(b.dataset.range) === radarRange);
+    b.onclick = function() { radarRange = Number(b.dataset.range); renderRadar(); };
+  });
+
+  var s = S[radarSerie];
+  var labels = DEMO.meses.slice(-radarRange), dados = s.dados.slice(-radarRange);
+  var variacao = ((dados[dados.length - 1] / dados[0]) - 1) * 100;
+
+  document.getElementById('radar-chart-title').textContent = 'Evolução — ' + s.titulo;
+  document.getElementById('radar-chart-sub').textContent = 'Série mensal · ' + labels[0] + ' a ' + labels[labels.length - 1];
+  document.getElementById('radar-chart-value').textContent = s.valor;
+  var dEl = document.getElementById('radar-chart-delta');
+  dEl.textContent = (variacao >= 0 ? '+' : '') + BRL2.format(variacao) + '% no período';
+  dEl.className = 'kpi-delta ' + (variacao >= 0 ? 'up' : 'down');
+
+  mk('ch-ind-serie', {
+    type: 'line',
+    data: { labels: labels, datasets: [{
+      label: s.titulo, data: dados,
+      borderColor: p[0], backgroundColor: areaFill(p[0]), fill: true,
+      pointBackgroundColor: p[0], pointBorderColor: css('--surface'), pointBorderWidth: 2
+    }] },
+    options: baseOpts({
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: function(c) { return BRL0.format(c.parsed.y) + ' ' + s.unidade; } } } },
+      scales: { y: { ticks: { callback: function(v) { return BRL0.format(v); } } } }
+    })
+  });
+
+  /* donut de foco de atuação com legenda em grade */
+  var cores = [];
+  for (var i = 0; i < DEMO.foco.labels.length; i++) cores.push(p[i % p.length]);
+  mk('ch-ind-foco', {
+    type: 'doughnut',
+    data: { labels: DEMO.foco.labels, datasets: [{ data: DEMO.foco.valores, backgroundColor: cores, borderWidth: 2, borderColor: css('--surface'), hoverOffset: 7 }] },
+    options: baseOpts({
+      cutout: '62%',
+      scales: { x: { display: false }, y: { display: false } },
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: function(c) {
+          var tot = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+          return BRL0.format(c.parsed) + ' fundos (' + BRL1.format(c.parsed / tot * 100) + '%)';
+        } } } }
+    })
+  });
+  document.getElementById('foco-legend').innerHTML = legendGrid(DEMO.foco.labels, cores);
+
+  /* KPIs reais da amostra */
+  var plTotal = 0, inadTotal = 0, dcTotal = 0, pddTotal = 0, nInf = 0;
+  CNPJS.forEach(function(c) {
+    var inf = ultimo(c), m = metrics(inf);
+    plTotal += inf.pl || 0; inadTotal += m.inad; dcTotal += m.dcTotal; pddTotal += m.pdd;
+    nInf += meses(c).length;
+  });
+  document.getElementById('radar-real-kpis').innerHTML = [
+    kpi('Fundos na amostra', String(CNPJS.length), nInf + ' informes lidos'),
+    kpi('PL somado', 'R$ ' + fmtMi(plTotal) + ' mi', 'competência mais recente'),
+    kpi('Direitos creditórios', 'R$ ' + fmtMi(dcTotal) + ' mi', 'adquiridos + sem aquisição'),
+    kpi('Inadimplência', fmtPct(dcTotal ? inadTotal / dcTotal * 100 : null), 'R$ ' + fmtMi(inadTotal) + ' mi', 'down'),
+    kpi('Cobertura de PDD', inadTotal ? BRL2.format(pddTotal / inadTotal) + 'x' : '—', 'PDD ÷ inadimplência')
+  ].join('');
+}
+
+/* ============================================================
+   Fundos — lista + detalhe (FUND_DATA)
+   ============================================================ */
+
+/* Lookup de nomes de administradoras por CNPJ */
+var ADM_NOMES = {
+  '62285390000140': 'QI (Singulare)',
+  '59281253000123': 'BTG Pactual Serviços Financeiros',
+  '39669186000101': 'Hemera',
+  '03317692000194': 'Finaxis',
+  '36113876000191': 'Oliveira Trust',
+  '24361690000172': 'Limine Trust',
+  '00806535000154': 'Planner Corretora',
+  '02201501000161': 'BNY Mellon Serviços Financeiros',
+  '16695922000109': 'ID DTVM',
+  '27652684000162': 'Genial Investimentos',
+  '12063256000127': 'Monetar',
+  '44782130000107': 'Actual',
+  '37678915000160': 'FIDD',
+  '62264924000152': 'Qore',
+  '62318407000119': 'S3 Caceis Brasil',
+  '42066258000130': 'RJI',
+  '15489568000195': 'Intra Investimentos',
+  '13673855000125': 'Oslo Capital',
+  '36266751000100': 'Finvest',
+  '00360305000104': 'Caixa Econômica Federal',
+  '71590442000183': 'Lastro RDV',
+  '62418140000131': 'Intrag',
+  '41592532000142': 'Mérito',
+  '00329598000167': 'Sefer Investimentos',
+  '44077014000189': 'BR Capital',
+  '13486793000142': 'Captalys DTVM',
+  '62232889000190': 'BRB DTVM',
+  '11758741000152': 'Vórtx DTVM',
+  '00066670000100': 'Banco Paulista',
+  '67030395000146': 'Sicoob DTVM',
+};
+
+function admNome(cnpj_adm) {
+  if (!cnpj_adm) return '—';
+  return ADM_NOMES[cnpj_adm] || fmtCnpj(cnpj_adm);
+}
+
+var fundosState = {
+  page: 1, perPage: 50,
+  sortKey: 'pl', sortDir: 'desc',
+  search: '', filterCond: '', filterCU: '', filterPlMin: '',
+  detailCnpj: null, detailTab: 'visao',
+  _cache: null
+};
+
+/* ---------- preparar lista de fundos a partir de FUND_DATA ---------- */
+function getFundosList() {
+  if (fundosState._cache) return fundosState._cache;
+  if (typeof FUND_DATA === 'undefined') return [];
+  var list = [];
+  var fundos = FUND_DATA.fundos || {};
+  Object.keys(fundos).forEach(function(cnpj) {
+    var f = fundos[cnpj], info = f.info || {};
+    var comps = f.competencias || {};
+    var compKeys = Object.keys(comps).sort();
+    var ult = compKeys.length ? comps[compKeys[compKeys.length - 1]] : null;
+    list.push({
+      cnpj: cnpj,
+      nome: (info.nome && info.nome !== '0' && info.nome !== 'Única' && info.nome !== 'Subordinada') ? info.nome : '',
+      cnpj_adm: info.cnpj_adm || '',
+      condominio: info.condominio || '',
+      class_unica: info.class_unica || '',
+      pl: ult ? (ult.pl || 0) : 0,
+      competencias: compKeys,
+      ultimo: ult
+    });
+  });
+  fundosState._cache = list;
+  return list;
+}
+
+/* ---------- filtrar e ordenar ---------- */
+function getFilteredFundos() {
+  var list = getFundosList();
+  var s = fundosState;
+  var search = s.search.toLowerCase().replace(/[.\-\/]/g, '');
+
+  var filtered = list.filter(function(f) {
+    if (search) {
+      var nome = (f.nome || '').toLowerCase();
+      var cnpjClean = f.cnpj.replace(/\D/g, '');
+      var admName = admNome(f.cnpj_adm).toLowerCase();
+      if (nome.indexOf(search) === -1 && cnpjClean.indexOf(search) === -1 && admName.indexOf(search) === -1) return false;
+    }
+    if (s.filterCond && f.condominio !== s.filterCond) return false;
+    if (s.filterCU && f.class_unica !== s.filterCU) return false;
+    if (s.filterPlMin && f.pl < Number(s.filterPlMin)) return false;
+    return true;
+  });
+
+  var key = s.sortKey, dir = s.sortDir === 'asc' ? 1 : -1;
+  filtered.sort(function(a, b) {
+    var va, vb;
+    if (key === 'nome') { va = (a.nome || a.cnpj).toLowerCase(); vb = (b.nome || b.cnpj).toLowerCase(); }
+    else if (key === 'cnpj') { va = a.cnpj; vb = b.cnpj; }
+    else if (key === 'adm') { va = a.cnpj_adm; vb = b.cnpj_adm; }
+    else if (key === 'condominio') { va = a.condominio; vb = b.condominio; }
+    else if (key === 'pl') { va = a.pl; vb = b.pl; }
+    else { va = a.pl; vb = b.pl; }
+    if (va < vb) return -dir;
+    if (va > vb) return dir;
+    return 0;
+  });
+  return filtered;
+}
+
+/* admInitials removido — substituído por admNome() */
+
+/* ---------- renderizar lista ---------- */
+function renderFundosList() {
+  var filtered = getFilteredFundos();
+  var s = fundosState;
+  var totalPages = Math.max(1, Math.ceil(filtered.length / s.perPage));
+  if (s.page > totalPages) s.page = totalPages;
+  var start = (s.page - 1) * s.perPage;
+  var pageItems = filtered.slice(start, start + s.perPage);
+
+  var tbody = document.getElementById('fundos-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = pageItems.map(function(f) {
+    var nomeCurto = f.nome ? curto(f.nome) : 'Sem tag de nome';
+    return '<tr data-cnpj="' + f.cnpj + '">' +
+      '<td class="nome-cell" title="' + (f.nome || 'Sem tag de nome').replace(/"/g, '&quot;') + '">' + nomeCurto + '</td>' +
+      '<td class="cnpj-cell">' + fmtCnpj(f.cnpj) + '</td>' +
+      '<td class="adm-cell">' + admNome(f.cnpj_adm) + '</td>' +
+      '<td class="cond-cell">' + (f.condominio || '—') + '</td>' +
+      '<td class="pl-cell">' + (f.pl ? 'R$ ' + BRL2.format(f.pl) : '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  /* clicar na linha abre detalhe */
+  tbody.querySelectorAll('tr[data-cnpj]').forEach(function(tr) {
+    tr.addEventListener('click', function() {
+      fundosState.detailCnpj = tr.dataset.cnpj;
+      fundosState.detailTab = 'visao';
+      renderFundoDetail();
+    });
+  });
+
+  /* cabeçalho de ordenação */
+  document.querySelectorAll('#fundos-table thead th.sortable').forEach(function(th) {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.sort === s.sortKey) th.classList.add(s.sortDir);
+  });
+
+  /* paginação */
+  var pagEl = document.getElementById('fundos-paginacao');
+  var fim = Math.min(start + s.perPage, filtered.length);
+  var pagHtml = '<span class="pag-info">Mostrando ' + (filtered.length ? start + 1 : 0) + ' a ' + fim + ' de ' + BRL0.format(filtered.length) + ' resultados</span>';
+  pagHtml += '<div class="pag-per-page"><span>Por página:</span><select id="pag-per-page-sel">';
+  [10, 25, 50, 100].forEach(function(n) {
+    pagHtml += '<option value="' + n + '"' + (n === s.perPage ? ' selected' : '') + '>' + n + '</option>';
+  });
+  pagHtml += '</select></div>';
+  pagHtml += '<div class="pag-controls">';
+  pagHtml += '<button ' + (s.page <= 1 ? 'disabled' : '') + ' data-pag="prev">&lt;</button>';
+
+  var pages = [];
+  if (totalPages <= 7) {
+    for (var i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (s.page > 3) pages.push('...');
+    for (var i = Math.max(2, s.page - 1); i <= Math.min(totalPages - 1, s.page + 1); i++) pages.push(i);
+    if (s.page < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+  pages.forEach(function(pg) {
+    if (pg === '...') { pagHtml += '<span style="padding:0 4px;color:var(--text-faint)">…</span>'; }
+    else { pagHtml += '<button data-pag="' + pg + '"' + (pg === s.page ? ' class="active"' : '') + '>' + pg + '</button>'; }
+  });
+  pagHtml += '<button ' + (s.page >= totalPages ? 'disabled' : '') + ' data-pag="next">&gt;</button>';
+  pagHtml += '</div>';
+  pagEl.innerHTML = pagHtml;
+
+  /* eventos de paginação */
+  pagEl.querySelectorAll('button[data-pag]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var v = btn.dataset.pag;
+      if (v === 'prev') s.page = Math.max(1, s.page - 1);
+      else if (v === 'next') s.page = Math.min(totalPages, s.page + 1);
+      else s.page = Number(v);
+      renderFundosList();
+    });
+  });
+  var ppSel = document.getElementById('pag-per-page-sel');
+  if (ppSel) ppSel.addEventListener('change', function() {
+    s.perPage = Number(ppSel.value);
+    s.page = 1;
+    renderFundosList();
+  });
+}
+
+/* ---------- renderFundos: ponto de entrada da aba ---------- */
+function renderFundos() {
+  if (fundosState.detailCnpj) {
+    renderFundoDetail();
+  } else {
+    showFundosList();
+  }
+}
+
+function showFundosList() {
+  fundosState.detailCnpj = null;
+  document.getElementById('fundos-list').style.display = '';
+  document.getElementById('fundos-detail').style.display = 'none';
+  renderFundosList();
+}
+
+/* ---------- renderizar detalhe do fundo ---------- */
+function renderFundoDetail() {
+  var cnpj = fundosState.detailCnpj;
+  if (!cnpj || typeof FUND_DATA === 'undefined') return;
+  var fundo = FUND_DATA.fundos[cnpj];
+  if (!fundo) { showFundosList(); return; }
+
+  document.getElementById('fundos-list').style.display = 'none';
+  document.getElementById('fundos-detail').style.display = '';
+
+  var info = fundo.info || {};
+  var comps = fundo.competencias || {};
+  var compKeys = Object.keys(comps).sort();
+  var ult = compKeys.length ? comps[compKeys[compKeys.length - 1]] : null;
+  var prev = compKeys.length > 1 ? comps[compKeys[compKeys.length - 2]] : null;
+
+  /* cabeçalho */
+  var nomeOk = (info.nome && info.nome !== '0' && info.nome !== 'Única' && info.nome !== 'Subordinada') ? info.nome : '';
+  document.getElementById('fundo-detail-nome').textContent = nomeOk ? curto(nomeOk) : 'Sem tag de nome';
+  document.getElementById('fundo-detail-sub').textContent = fmtCnpj(cnpj) + ' · ' + admNome(info.cnpj_adm) + ' · ' + (info.condominio || '—') + (ult ? ' · competência ' + ult.competencia : '');
+
+  /* abas */
+  var tab = fundosState.detailTab;
+  document.querySelectorAll('#fundo-detail-tabs .tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.dtab === tab);
+    t.onclick = function() { fundosState.detailTab = t.dataset.dtab; renderFundoDetail(); };
+  });
+
+  var content = document.getElementById('fundo-detail-content');
+  var p = palette();
+
+  /* ---------- despachar para aba ---------- */
+  if (tab === 'visao') renderDetailVisao(content, cnpj, fundo, ult, prev, compKeys, p);
+  else if (tab === 'carteira') renderDetailCarteira(content, cnpj, fundo, ult, prev, p);
+  else if (tab === 'ativo') renderDetailAtivo(content, cnpj, fundo, ult, p);
+  else if (tab === 'cedentes') renderDetailCedentes(content, cnpj, fundo, compKeys);
+  else if (tab === 'passivo') renderDetailPassivo(content, cnpj, fundo, ult, p);
+  else if (tab === 'risco') renderDetailRisco(content, cnpj, fundo, ult, compKeys, p);
+  else if (tab === 'documentos') renderDetailDocumentos(content, cnpj, fundo, compKeys);
+  else renderDetailEmpty(content, tab);
+}
+
+/* ---------- Visão geral ---------- */
+function renderDetailVisao(el, cnpj, fundo, ult, prev, compKeys, p) {
+  if (!ult) { el.innerHTML = '<div class="tab-empty">Sem dados disponíveis.</div>'; return; }
+
+  var dcTotal = (ult.dc_aquis_total || 0) + (ult.dicred_total || 0);
+  var inad = (ult.dc_inad || 0) + (ult.dicred_inad || 0);
+  var pdd = (ult.dc_pdd || 0) + (ult.dicred_pdd || 0);
+  var base = dcTotal || ult.carteira || 0;
+  var inadPct = base ? (inad / base) * 100 : null;
+  var cobertura = inad ? pdd / inad : null;
+
+  var dPl = prev ? ((ult.pl - prev.pl) / prev.pl) * 100 : null;
+
+  el.innerHTML =
+    '<div class="kpi-row five">' +
+      kpi('Patrimônio líquido', 'R$ ' + fmtMi(ult.pl) + ' mi',
+        dPl === null ? ult.competencia : (dPl >= 0 ? '▲ +' : '▼ ') + BRL1.format(dPl) + '%' + (prev ? ' vs ' + prev.competencia : ''),
+        dPl === null ? '' : (dPl >= 0 ? 'up' : 'down'), 'Fonte: CVM') +
+      kpi('Carteira', 'R$ ' + fmtMi(ult.carteira) + ' mi', 'ativo total R$ ' + fmtMi(ult.ativo_total) + ' mi', '', 'Fonte: CVM') +
+      kpi('Direitos creditórios', 'R$ ' + fmtMi(dcTotal) + ' mi', 'adimplentes R$ ' + fmtMi(ult.dc_venc_adimpl) + ' mi', '', 'Fonte: CVM') +
+      kpi('Inadimplência', fmtPct(inadPct), 'R$ ' + fmtMi(inad) + ' mi', inadPct > 10 ? 'down' : '', 'Fonte: CVM') +
+      kpi('Cobertura de PDD', cobertura === null ? '—' : BRL2.format(cobertura) + 'x', 'PDD R$ ' + fmtMi(pdd) + ' mi', cobertura !== null && cobertura < 0.5 ? 'down' : '', 'Fonte: CVM') +
+    '</div>' +
+    '<div class="grid-2 wide-left">' +
+      '<div class="panel"><div class="panel-head"><div><h2>Patrimônio líquido</h2><div class="sub">' + compKeys.length + ' competência(s)</div></div>' +
+        '<span class="pill">' + compKeys[0] + ' a ' + compKeys[compKeys.length - 1] + '</span></div>' +
+        '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-pl"></canvas></div></div>' +
+        '<div class="fonte">Fonte: CVM · informe mensal estruturado</div></div>' +
+      '<div class="panel"><div class="panel-head"><h2>Composição do ativo</h2><span class="ref">' + ult.competencia + '</span></div>' +
+        '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-ativo"></canvas></div></div>' +
+        '<div class="fonte">Fonte: CVM</div></div>' +
+    '</div>';
+
+  /* gráfico PL */
+  var comps = fundo.competencias;
+  mk('ch-fd-pl', {
+    type: 'line',
+    data: { labels: compKeys, datasets: [
+      { label: 'PL (R$ mi)', data: compKeys.map(function(k) { return mi(comps[k].pl); }),
+        borderColor: p[0], backgroundColor: areaFill(p[0]), fill: true, pointRadius: 4, pointBackgroundColor: p[0], pointBorderColor: css('--surface'), pointBorderWidth: 2 },
+      { label: 'PL médio (R$ mi)', data: compKeys.map(function(k) { return mi(comps[k].pl_medio); }),
+        borderColor: p[1], borderDash: [5, 4], fill: false, pointRadius: 3, pointBackgroundColor: p[1] }
+    ] },
+    options: baseOpts({ plugins: { tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': R$ ' + BRL2.format(c.parsed.y) + ' mi'; } } } } })
+  });
+
+  /* gráfico ativo */
+  var ativoLabels = ['Dir. creditórios', 'Valores mobiliários', 'CDB', 'Títulos púb. federais', 'Op. compromissada', 'Disponibilidades'];
+  var ativoVals = [mi(dcTotal), mi(ult.valores_mob_total), mi(ult.cdb), mi(ult.titpub_fed), mi(ult.oper_compromissada), mi(ult.disponib)];
+  mk('ch-fd-ativo', {
+    type: 'bar',
+    data: { labels: ativoLabels, datasets: [{ label: 'R$ mi', data: ativoVals, backgroundColor: p.slice(0, 6), maxBarThickness: 46 }] },
+    options: baseOpts({ indexAxis: 'y', plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'R$ ' + BRL2.format(c.parsed.x) + ' mi'; } } } },
+      scales: { x: { grid: { color: css('--grid'), borderDash: [4, 4], drawTicks: false } }, y: { grid: { display: false } } } })
+  });
+}
+
+/* ---------- Carteira (referência visual: grid de categorias) ---------- */
+function renderDetailCarteira(el, cnpj, fundo, ult, prev, p) {
+  if (!ult) { el.innerHTML = '<div class="tab-empty">Sem dados disponíveis.</div>'; return; }
+
+  var seg = ult.cart_segmt || {};
+  var cartTotal = ult.carteira || 0;
+
+  /* itens da carteira — categorias do informe */
+  var items = [
+    { nome: 'Direitos Creditórios', val: (ult.dc_aquis_total || 0) + (ult.dicred_total || 0) },
+    { nome: 'Debêntures', val: ult.debentures || 0 },
+    { nome: 'CRI', val: ult.cri || 0 },
+    { nome: 'Notas Promissórias Comerciais', val: 0 },
+    { nome: 'Letras Financeiras', val: 0 },
+    { nome: 'Cotas de FIF', val: ult.cotas_fif || 0 },
+    { nome: 'Cotas de Fundos ICVM 555', val: 0 },
+    { nome: 'Outros Valores Mobiliários', val: ult.valores_mob_total || 0 },
+    { nome: 'Títulos Públicos Federais', val: ult.titpub_fed || 0 },
+    { nome: 'Certificados de Depósitos Bancários', val: ult.cdb || 0 },
+    { nome: 'Aplicações em Op. Compromissadas', val: ult.oper_compromissada || 0 },
+    { nome: 'Outros Ativos de Renda Fixa', val: ult.ativo_rf || 0 },
+    { nome: 'Cotas de FIDCs', val: ult.cotas_fidc || 0 },
+    { nome: 'Cotas de FIDCs Não Padronizados', val: 0 },
+    { nome: 'Derivativos', val: ult.derivativos_total || 0 },
+    { nome: 'Depósitos de Margem', val: 0 },
+    { nome: 'Diferencial de Swap a Receber', val: 0 },
+    { nome: 'Outros Ativos', val: ult.outros_ativos_total || 0 }
+  ];
+
+  /* variação total carteira */
+  var prevCarteira = prev ? (prev.carteira || 0) : 0;
+  var varPct = prevCarteira ? ((cartTotal / prevCarteira - 1) * 100) : null;
+
+  /* barra de cores (só itens com valor > 0) */
+  var positives = items.filter(function(it) { return it.val > 0; });
+  var barHtml = positives.map(function(it, i) {
+    var pct = cartTotal ? (it.val / cartTotal * 100) : 0;
+    return '<i style="width:' + pct.toFixed(2) + '%;background:' + p[i % p.length] + '"></i>';
+  }).join('');
+
+  /* grid de itens */
+  var gridHtml = items.map(function(it, i) {
+    var pct = cartTotal ? (it.val / cartTotal * 100) : 0;
+    var cor = it.val > 0 ? p[positives.indexOf(it) % p.length] : 'var(--text-faint)';
+    return '<div class="carteira-item">' +
+      '<span class="ci-dot" style="background:' + cor + '"></span>' +
+      '<div class="ci-info"><div class="ci-name">' + it.nome + '</div><div class="ci-value">R$ ' + BRL2.format(it.val) + '</div></div>' +
+      '<span class="ci-pct">' + BRL2.format(pct) + '%</span>' +
+    '</div>';
+  }).join('');
+
+  /* KPIs de negociação — montante/quantidade adquirido etc. */
+  var kpisHtml =
+    '<div class="carteira-kpis">' +
+      '<div class="carteira-kpi"><div class="ck-label">Montante Adquirido</div><div class="ck-value">R$ ' + BRL2.format(ult.dc_aquis_total || 0) + '</div><div class="ck-delta">' + ult.competencia + '</div></div>' +
+      '<div class="carteira-kpi"><div class="ck-label">Vencidos Adimplentes</div><div class="ck-value">R$ ' + BRL2.format(ult.dc_venc_adimpl || 0) + '</div><div class="ck-delta">' + ult.competencia + '</div></div>' +
+      '<div class="carteira-kpi"><div class="ck-label">Inadimplência</div><div class="ck-value">R$ ' + BRL2.format((ult.dc_inad || 0) + (ult.dicred_inad || 0)) + '</div><div class="ck-delta">' + ult.competencia + '</div></div>' +
+      '<div class="carteira-kpi"><div class="ck-label">PDD</div><div class="ck-value">R$ ' + BRL2.format((ult.dc_pdd || 0) + (ult.dicred_pdd || 0)) + '</div><div class="ck-delta">' + ult.competencia + '</div></div>' +
+    '</div>';
+
+  el.innerHTML =
+    '<div class="panel"><div class="panel-head"><div><h2>Carteira</h2><div class="sub">competência ' + ult.competencia + '</div></div>' +
+      (varPct !== null ? '<span class="ref" style="color:' + (varPct >= 0 ? 'var(--success)' : 'var(--warn)') + '">' + (varPct >= 0 ? '↗ ' : '↘ ') + BRL2.format(varPct) + '% vs ant.</span>' : '') +
+    '</div><div class="panel-body">' +
+      '<div class="carteira-total">R$ ' + BRL2.format(cartTotal) + '</div>' +
+      '<div class="carteira-bar">' + barHtml + '</div>' +
+      '<div class="carteira-grid">' + gridHtml + '</div>' +
+      kpisHtml +
+    '</div></div>';
+}
+
+/* ---------- Ativo ---------- */
+function renderDetailAtivo(el, cnpj, fundo, ult, p) {
+  if (!ult) { el.innerHTML = '<div class="tab-empty">Sem dados disponíveis.</div>'; return; }
+
+  var seg = ult.cart_segmt || {};
+  var segLabels = {
+    industrial: 'Industrial', imobiliario: 'Imobiliário',
+    comercial_total: 'Comercial', servicos_total: 'Serviços',
+    agronegocio: 'Agronegócio', financeiro_total: 'Financeiro',
+    setor_publico_total: 'Setor público', factoring_total: 'Factoring/Fomento',
+    cartao_credito: 'Cartão de crédito', acao_judicial: 'Ação judicial',
+    marcas_patentes: 'Marcas e patentes'
+  };
+  var segItems = [];
+  Object.keys(segLabels).forEach(function(k) {
+    if (seg[k]) segItems.push({ nome: segLabels[k], val: seg[k] });
+  });
+  var segTotal = seg.total || segItems.reduce(function(a, it) { return a + it.val; }, 0);
+
+  el.innerHTML =
+    '<div class="grid-2"><div class="panel"><div class="panel-head"><h2>Segmentação da carteira</h2><span class="ref">' + ult.competencia + '</span></div>' +
+      '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-seg"></canvas></div>' +
+      '<div class="legend-grid" id="fd-seg-legend"></div></div>' +
+      '<div class="fonte">Fonte: CVM · bloco CART_SEGMT</div></div>' +
+    '<div class="panel"><div class="panel-head"><h2>Ativo total</h2><span class="ref">' + ult.competencia + '</span></div>' +
+      '<div class="panel-body pt"><dl class="deflist">' +
+        '<div><dt>Ativo total</dt><dd class="mono">R$ ' + BRL2.format(ult.ativo_total) + '</dd></div>' +
+        '<div><dt>Carteira</dt><dd class="mono">R$ ' + BRL2.format(ult.carteira) + '</dd></div>' +
+        '<div><dt>Disponibilidades</dt><dd class="mono">R$ ' + BRL2.format(ult.disponib) + '</dd></div>' +
+        '<div><dt>Passivo total</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_total) + '</dd></div>' +
+        '<div><dt>PL</dt><dd class="mono">R$ ' + BRL2.format(ult.pl) + '</dd></div>' +
+      '</dl></div></div></div>';
+
+  if (segItems.length) {
+    var segCores = segItems.map(function(_, i) { return p[i % p.length]; });
+    mk('ch-fd-seg', {
+      type: 'doughnut',
+      data: { labels: segItems.map(function(it) { return it.nome; }),
+        datasets: [{ data: segItems.map(function(it) { return mi(it.val); }), backgroundColor: segCores, borderWidth: 2, borderColor: css('--surface'), hoverOffset: 7 }] },
+      options: baseOpts({ cutout: '62%', scales: { x: { display: false }, y: { display: false } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) {
+          var tot = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+          return 'R$ ' + BRL1.format(c.parsed) + ' mi (' + BRL1.format(tot ? c.parsed / tot * 100 : 0) + '%)';
+        } } } } })
+    });
+    document.getElementById('fd-seg-legend').innerHTML = legendGrid(
+      segItems.map(function(it) { return it.nome; }), segCores,
+      segItems.map(function(it) { return 'R$ ' + fmtMi(it.val) + ' mi'; })
+    );
+  }
+}
+
+/* ---------- Cedentes ---------- */
+function renderDetailCedentes(el, cnpj, fundo, compKeys) {
+  var comps = fundo.competencias || {};
+  var rows = [];
+  compKeys.forEach(function(k) {
+    var c = comps[k];
+    (c.cedentes || []).forEach(function(ced) {
+      rows.push({ compt: k, cnpj: ced.cnpj, pct: ced.participacao || 0, carteira: c.carteira || 0 });
+    });
+  });
+  rows.sort(function(a, b) { return b.pct - a.pct; });
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="panel"><div class="panel-body"><div class="tab-empty">Nenhum cedente atingiu o corte de 10% da carteira neste fundo.</div></div></div>';
+    return;
+  }
+
+  el.innerHTML =
+    '<div class="panel"><div class="panel-head bordered"><div><h2>Cedentes divulgados</h2><div class="sub">concentração acima de 10% da carteira</div></div>' +
+      '<span class="ref">' + rows.length + ' registro(s)</span></div>' +
+    '<div class="table-wrap"><table>' +
+      '<thead><tr><th>CNPJ do cedente</th><th>Competência</th><th class="num">% da carteira</th><th class="num">Exposição estimada</th><th>Status</th></tr></thead><tbody>' +
+      rows.map(function(r) {
+        var risco = r.pct >= 30 ? 'warn' : 'ok';
+        return '<tr><td class="name mono">' + fmtCnpj(r.cnpj) + '</td><td class="mono">' + r.compt + '</td>' +
+          '<td class="mono num">' + BRL2.format(r.pct) + '%</td>' +
+          '<td class="mono num">R$ ' + fmtMi(r.carteira * r.pct / 100) + ' mi</td>' +
+          '<td><span class="badge ' + risco + '">' + (risco === 'warn' ? 'Concentrado' : 'Dentro do limite') + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+    '<p class="panel-note">A razão social não consta do XML — depende de cruzamento com a base de CNPJ da Receita Federal.</p></div>';
+}
+
+/* ---------- Passivo ---------- */
+function renderDetailPassivo(el, cnpj, fundo, ult, p) {
+  if (!ult) { el.innerHTML = '<div class="tab-empty">Sem dados disponíveis.</div>'; return; }
+  el.innerHTML =
+    '<div class="grid-2">' +
+      '<div class="panel"><div class="panel-head"><h2>Estrutura do passivo</h2><span class="ref">' + ult.competencia + '</span></div>' +
+        '<div class="panel-body pt"><dl class="deflist">' +
+          '<div><dt>Passivo total</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_total) + '</dd></div>' +
+          '<div><dt>Valores a pagar</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_valores || 0) + '</dd></div>' +
+          '<div><dt>Curto prazo</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_curto_prazo || 0) + '</dd></div>' +
+          '<div><dt>Longo prazo</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_longo_prazo || 0) + '</dd></div>' +
+          '<div><dt>Posições</dt><dd class="mono">R$ ' + BRL2.format(ult.passivo_posicoes || 0) + '</dd></div>' +
+        '</dl></div></div>' +
+      '<div class="panel"><div class="panel-head"><h2>Composição do passivo</h2></div>' +
+        '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-passivo"></canvas></div></div></div>' +
+    '</div>';
+
+  var passivoLabels = ['Valores a pagar', 'Curto prazo', 'Longo prazo', 'Posições'];
+  var passivoVals = [ult.passivo_valores || 0, ult.passivo_curto_prazo || 0, ult.passivo_longo_prazo || 0, ult.passivo_posicoes || 0].map(mi);
+  mk('ch-fd-passivo', {
+    type: 'bar',
+    data: { labels: passivoLabels, datasets: [{ label: 'R$ mi', data: passivoVals, backgroundColor: [p[0], p[1], p[2], p[3]], maxBarThickness: 46 }] },
+    options: baseOpts({ plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'R$ ' + BRL2.format(c.parsed.y) + ' mi'; } } } } })
+  });
+}
+
+/* ---------- Indicadores de Risco ---------- */
+function renderDetailRisco(el, cnpj, fundo, ult, compKeys, p) {
+  if (!ult) { el.innerHTML = '<div class="tab-empty">Sem dados disponíveis.</div>'; return; }
+  var dcTotal = (ult.dc_aquis_total || 0) + (ult.dicred_total || 0);
+  var inad = (ult.dc_inad || 0) + (ult.dicred_inad || 0);
+  var pdd = (ult.dc_pdd || 0) + (ult.dicred_pdd || 0);
+  var base = dcTotal || ult.carteira || 0;
+  var inadPct = base ? (inad / base) * 100 : null;
+  var cobertura = inad ? pdd / inad : null;
+
+  el.innerHTML =
+    '<div class="kpi-row" style="margin-bottom:1.2rem">' +
+      kpi('Inadimplência', fmtPct(inadPct), 'R$ ' + fmtMi(inad) + ' mi', inadPct > 10 ? 'down' : '', '') +
+      kpi('PDD', 'R$ ' + fmtMi(pdd) + ' mi', '', '', '') +
+      kpi('Cobertura (PDD/Inad.)', cobertura === null ? '—' : BRL2.format(cobertura) + 'x', '', cobertura !== null && cobertura < 0.5 ? 'down' : '', '') +
+      kpi('Ações judiciais', 'R$ ' + fmtMi(ult.dc_acao_judic) + ' mi', '', '', '') +
+    '</div>' +
+    '<div class="grid-2">' +
+      '<div class="panel"><div class="panel-head"><h2>Evolução PDD vs Inadimplência</h2></div>' +
+        '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-pdd"></canvas></div></div></div>' +
+      '<div class="panel"><div class="panel-head"><h2>Composição da carteira por prazo</h2></div>' +
+        '<div class="panel-body"><div class="chart-box"><canvas id="ch-fd-prazo"></canvas></div></div></div>' +
+    '</div>';
+
+  var comps = fundo.competencias;
+  mk('ch-fd-pdd', {
+    type: 'bar',
+    data: { labels: compKeys, datasets: [
+      { type: 'bar', label: 'Inadimplência (R$ mi)', data: compKeys.map(function(k) { return mi((comps[k].dc_inad || 0) + (comps[k].dicred_inad || 0)); }), backgroundColor: p[6] || p[2], maxBarThickness: 40 },
+      { type: 'bar', label: 'PDD (R$ mi)', data: compKeys.map(function(k) { return mi((comps[k].dc_pdd || 0) + (comps[k].dicred_pdd || 0)); }), backgroundColor: p[1], maxBarThickness: 40 }
+    ] },
+    options: baseOpts({ plugins: { tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': R$ ' + BRL2.format(c.parsed.y) + ' mi'; } } } } })
+  });
+
+  /* prazo — DC adimplentes vs inadimplentes */
+  mk('ch-fd-prazo', {
+    type: 'bar',
+    data: { labels: ['Adimplentes', 'Inadimplentes'],
+      datasets: [{ label: 'R$ mi', data: [mi(ult.dc_venc_adimpl), mi(inad)], backgroundColor: [p[0], p[6] || p[2]], maxBarThickness: 60 }] },
+    options: baseOpts({ plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: function(c) { return 'R$ ' + BRL2.format(c.parsed.y) + ' mi'; } } } } })
+  });
+}
+
+/* ---------- Documentos ---------- */
+function renderDetailDocumentos(el, cnpj, fundo, compKeys) {
+  var comps = fundo.competencias || {};
+  el.innerHTML =
+    '<div class="panel"><div class="panel-head bordered"><h2>Informes recebidos</h2><span class="ref">' + compKeys.length + ' competência(s)</span></div>' +
+    '<div class="table-wrap"><table>' +
+      '<thead><tr><th>Arquivo</th><th>Competência</th><th class="num">PL</th><th>Status</th></tr></thead><tbody>' +
+      compKeys.slice().reverse().map(function(k) {
+        var d = comps[k];
+        return '<tr><td class="name mono" style="font-size:12px">' + cnpj + '_InformeMensal_' + k.replace('/', '-') + '.xml</td>' +
+          '<td class="mono">' + k + '</td><td class="mono num">R$ ' + fmtMi(d.pl) + ' mi</td>' +
+          '<td><span class="badge ok">processado</span></td></tr>';
+      }).join('') +
+    '</tbody></table></div></div>';
+}
+
+/* ---------- Abas sem dados ---------- */
+function renderDetailEmpty(el, tab) {
+  var nomes = {
+    prestadores: 'Prestadores de Serviço', investidores: 'Investidores',
+    'invest-outros': 'Investimentos em outros fundos', ofertas: 'Histórico de Ofertas'
+  };
+  el.innerHTML =
+    '<div class="tab-empty">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v5h5M6 3h8l6 6v12H6z"/><path d="M9 13h6M9 17h4"/></svg>' +
+      '<div>Dados de <b>' + (nomes[tab] || tab) + '</b> não disponíveis nesta versão.</div>' +
+      '<div style="margin-top:6px;font-size:12px">Esta funcionalidade será habilitada em atualizações futuras.</div>' +
+    '</div>';
+}
+
+/* ---------- Fundos: event bindings ---------- */
+(function() {
+  /* busca */
+  var searchInput = document.getElementById('fundos-search');
+  if (searchInput) searchInput.addEventListener('input', function() {
+    fundosState.search = this.value; fundosState.page = 1; renderFundosList();
+  });
+
+  /* filtros toggle */
+  var btnFiltros = document.getElementById('btn-fundos-filtros');
+  var panelFiltros = document.getElementById('fundos-filters');
+  if (btnFiltros && panelFiltros) btnFiltros.addEventListener('click', function() {
+    panelFiltros.style.display = panelFiltros.style.display === 'none' ? '' : 'none';
+  });
+
+  /* filtro: condomínio */
+  var selCond = document.getElementById('filtro-condominio');
+  if (selCond) selCond.addEventListener('change', function() {
+    fundosState.filterCond = this.value; fundosState.page = 1; renderFundosList();
+  });
+
+  /* filtro: classe única */
+  var selCU = document.getElementById('filtro-classe-unica');
+  if (selCU) selCU.addEventListener('change', function() {
+    fundosState.filterCU = this.value; fundosState.page = 1; renderFundosList();
+  });
+
+  /* filtro: PL mínimo */
+  var selPL = document.getElementById('filtro-pl-min');
+  if (selPL) selPL.addEventListener('change', function() {
+    fundosState.filterPlMin = this.value; fundosState.page = 1; renderFundosList();
+  });
+
+  /* voltar */
+  var btnVoltar = document.getElementById('btn-voltar-fundos');
+  if (btnVoltar) btnVoltar.addEventListener('click', function() { showFundosList(); });
+
+  /* export */
+  document.getElementById('btn-export').addEventListener('click', function() {
+    var cnpj = fundosState.detailCnpj;
+    if (!cnpj || typeof FUND_DATA === 'undefined' || !FUND_DATA.fundos[cnpj]) return;
+    var payload = FUND_DATA.fundos[cnpj];
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = cnpj + '_dados.json';
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 1500);
+  });
+})();
+
+/* ============================================================
+   Instituições
+   ============================================================ */
+function renderInst() {
+  var p = palette();
+  var admMap = {};
+  CNPJS.forEach(function(c) {
+    var inf = ultimo(c), meta = FD.meta[c] || {};
+    admMap[inf.adm] = admMap[inf.adm] || { fundos: [], pl: 0 };
+    admMap[inf.adm].fundos.push({ nome: curto(meta.nome || c), pl: inf.pl, cust: meta.custodiante, aud: meta.auditor });
+    admMap[inf.adm].pl += inf.pl || 0;
+  });
+
+  var rows = [];
+  Object.keys(admMap).forEach(function(adm) {
+    admMap[adm].fundos.forEach(function(f, i) {
+      rows.push('<tr>' +
+        '<td class="name">' + (i === 0 ? fmtCnpj(adm) + '<span class="sub">' + admMap[adm].fundos.length + ' fundo(s) · R$ ' + fmtMi(admMap[adm].pl) + ' mi</span>' : '') + '</td>' +
+        '<td>' + f.nome + '</td><td class="mono num">R$ ' + fmtMi(f.pl) + ' mi</td>' +
+        '<td>' + (f.cust || '—') + '</td><td>' + (f.aud || '—') + '</td></tr>');
+    });
+  });
+  document.getElementById('inst-table').innerHTML =
+    '<thead><tr><th>Administrador (CNPJ)</th><th>Fundo</th><th class="num">PL</th><th>Custodiante</th><th>Auditor</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+
+  mk('ch-inst-adm', {
+    type: 'bar',
+    data: { labels: DEMO.admNomes, datasets: [{ label: 'PL administrado (R$ bi)', data: DEMO.admPl, backgroundColor: p[0], maxBarThickness: 26 }] },
+    options: baseOpts({ indexAxis: 'y', plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: css('--grid'), borderDash: [4, 4], drawTicks: false } }, y: { grid: { display: false } } } })
+  });
+
+  var custCores = DEMO.custNomes.map(function(_, i) { return p[i % p.length]; });
+  mk('ch-inst-cust', {
+    type: 'doughnut',
+    data: { labels: DEMO.custNomes, datasets: [{ data: DEMO.custShare, backgroundColor: custCores, borderWidth: 2, borderColor: css('--surface'), hoverOffset: 7 }] },
+    options: baseOpts({ cutout: '62%', scales: { x: { display: false }, y: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return c.parsed + '%'; } } } } })
+  });
+  document.getElementById('cust-legend').innerHTML = legendGrid(DEMO.custNomes, custCores, DEMO.custShare.map(function(v) { return v + '%'; }));
+}
+
+/* ============================================================
+   Cedentes
+   ============================================================ */
+function renderCedentes() {
+  var p = palette();
+  var todos = [];
+  CNPJS.forEach(function(c) {
+    meses(c).forEach(function(mm) {
+      var inf = FD.informes[c][mm];
+      (inf.cedentes || []).forEach(function(ced) {
+        todos.push({ fundo: curto((FD.meta[c] || {}).nome || c), cnpjFundo: c, compt: mm, cnpj: ced.cnpj, pct: ced.pct, carteira: inf.carteira });
+      });
+    });
+  });
+
+  var ultimoMes = todos.filter(function(t) { return t.compt === meses(t.cnpjFundo)[meses(t.cnpjFundo).length - 1]; });
+  var unicos = {};
+  ultimoMes.forEach(function(t) { unicos[t.cnpj] = true; });
+  var maior = ultimoMes.reduce(function(a, b) { return (b.pct > (a.pct || 0)) ? b : a; }, {});
+
+  document.getElementById('ced-kpis').innerHTML = [
+    kpi('Cedentes divulgados', String(Object.keys(unicos).length), 'acima de 10% da carteira', '', 'Fonte: CVM'),
+    kpi('Fundos com divulgação', String(new Set(ultimoMes.map(function(t) { return t.cnpjFundo; })).size) + '/' + CNPJS.length, 'os demais não atingem o corte', '', 'Fonte: CVM'),
+    kpi('Maior concentração', fmtPct(maior.pct), fmtCnpj(maior.cnpj), 'down', 'Fonte: CVM'),
+    kpi('Top 3 somados', fmtPct(ultimoMes.filter(function(t) { return t.cnpjFundo === maior.cnpjFundo; }).reduce(function(a, b) { return a + b.pct; }, 0)), maior.fundo, '', 'Fonte: CVM')
+  ].join('');
+
+  var fundosComCed = CNPJS.filter(function(c) { return (ultimo(c).cedentes || []).length; });
+  var ds = [];
+  var maxCed = Math.max.apply(null, fundosComCed.map(function(c) { return ultimo(c).cedentes.length; }));
+  for (var i = 0; i < maxCed; i++) {
+    ds.push({ label: 'Cedente ' + (i + 1),
+      data: fundosComCed.map(function(c) { var cd = ultimo(c).cedentes[i]; return cd ? cd.pct : 0; }),
+      backgroundColor: p[i], stack: 'c', maxBarThickness: 64 });
+  }
+  ds.push({ label: 'Demais (<10% cada)',
+    data: fundosComCed.map(function(c) { return 100 - ultimo(c).cedentes.reduce(function(a, b) { return a + b.pct; }, 0); }),
+    backgroundColor: isDark() ? '#2a3540' : css('--ft-gray1'), stack: 'c', maxBarThickness: 64 });
+
+  mk('ch-ced-conc', {
+    type: 'bar',
+    data: { labels: fundosComCed.map(function(c) { return curto((FD.meta[c] || {}).nome || c).slice(0, 26); }), datasets: ds },
+    options: baseOpts({ scales: { x: { stacked: true }, y: { stacked: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } },
+      plugins: { tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + BRL2.format(c.parsed.y) + '%'; } } } } })
+  });
+
+  var atl = '09194841000151';
+  var m1 = FD.informes[atl]['08/2026'], m2 = FD.informes[atl]['09/2026'];
+  mk('ch-ced-var', {
+    type: 'bar',
+    data: { labels: m2.cedentes.map(function(c) { return fmtCnpj(c.cnpj).slice(0, 10) + '…'; }), datasets: [
+      { label: '08/2026', data: m1.cedentes.map(function(c) { return c.pct; }), backgroundColor: p[5], maxBarThickness: 40 },
+      { label: '09/2026', data: m2.cedentes.map(function(c) { return c.pct; }), backgroundColor: p[0], maxBarThickness: 40 }
+    ] },
+    options: baseOpts({ scales: { y: { ticks: { callback: function(v) { return v + '%'; } } } } })
+  });
+
+  document.getElementById('ced-table').innerHTML =
+    '<thead><tr><th>CNPJ do cedente</th><th>Fundo</th><th>Competência</th><th class="num">% da carteira</th><th class="num">Exposição estimada</th><th>Status</th></tr></thead><tbody>' +
+    todos.sort(function(a, b) { return b.pct - a.pct; }).map(function(t) {
+      var risco = t.pct >= 30 ? 'warn' : 'ok';
+      return '<tr><td class="name mono">' + fmtCnpj(t.cnpj) + '</td><td>' + t.fundo + '</td><td class="mono">' + t.compt + '</td>' +
+        '<td class="mono num">' + BRL2.format(t.pct) + '%</td>' +
+        '<td class="mono num">R$ ' + fmtMi(t.carteira * t.pct / 100) + ' mi</td>' +
+        '<td><span class="badge ' + risco + '">' + (risco === 'warn' ? 'Concentrado' : 'Dentro do limite') + '</span></td></tr>';
+    }).join('') + '</tbody>';
+}
+
+/* ============================================================
+   Franklin FIDCs (ilustrativo)
+   ============================================================ */
+function renderFranklin() {
+  var p = palette();
+  mk('ch-ft-expo', {
+    type: 'doughnut',
+    data: { labels: DEMO.ftClasses, datasets: [{ data: DEMO.ftExpo, backgroundColor: [p[0], p[3], p[6]], borderWidth: 2, borderColor: css('--surface'), hoverOffset: 7 }] },
+    options: baseOpts({ cutout: '62%', scales: { x: { display: false }, y: { display: false } },
+      plugins: { tooltip: { callbacks: { label: function(c) { return 'R$ ' + BRL0.format(c.parsed) + ' mi'; } } } } })
+  });
+  mk('ch-ft-evol', {
+    type: 'line',
+    data: { labels: DEMO.ftMeses, datasets: [{ label: 'Exposição (R$ mi)', data: DEMO.ftEvol,
+      borderColor: p[0], backgroundColor: areaFill(p[0]), fill: true, pointRadius: 4, pointBackgroundColor: p[0], pointBorderColor: css('--surface'), pointBorderWidth: 2 }] },
+    options: baseOpts({ plugins: { legend: { display: false } } })
+  });
+  document.getElementById('ft-table').innerHTML =
+    '<thead><tr><th>Fundo</th><th>Classe</th><th class="num">Exposição (R$ mi)</th><th class="num">Taxa alvo</th><th class="num">Coverage</th><th>Status</th></tr></thead><tbody>' +
+    DEMO.ftPos.map(function(r) {
+      return '<tr><td class="name">' + r[0] + '</td><td>' + r[1] + '</td><td class="mono num">' + r[2] + '</td>' +
+        '<td class="mono num">' + r[3] + '</td><td class="mono num">' + r[4] + '</td>' +
+        '<td><span class="badge ' + r[5] + '">' + r[6] + '</span></td></tr>';
+    }).join('') + '</tbody>';
+
+  /* Monitoramento de FIDCs — setup de eventos e render */
+  initFranklinMonitor();
+}
+
+/* ============================================================
+   Franklin — Monitoramento de CNPJs (localStorage)
+   ============================================================ */
+var FT_STORAGE_KEY = 'franklin_monitor_cnpjs';
+
+function ftGetCnpjs() {
+  try { return JSON.parse(localStorage.getItem(FT_STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function ftSaveCnpjs(list) {
+  try { localStorage.setItem(FT_STORAGE_KEY, JSON.stringify(list)); }
+  catch(e) { /* silencioso */ }
+}
+
+function ftAddCnpj(raw) {
+  var clean = raw.replace(/\D/g, '');
+  if (clean.length !== 14) return false;
+  var list = ftGetCnpjs();
+  if (list.indexOf(clean) !== -1) return false;
+  list.push(clean);
+  ftSaveCnpjs(list);
+  return true;
+}
+
+function ftRemoveCnpj(cnpj) {
+  var list = ftGetCnpjs().filter(function(c) { return c !== cnpj; });
+  ftSaveCnpjs(list);
+}
+
+function renderFranklinMonitor() {
+  var cnpjs = ftGetCnpjs();
+  var countEl = document.getElementById('ft-monitor-count');
+  var tableEl = document.getElementById('ft-monitor-table');
+  if (!countEl || !tableEl) return;
+
+  countEl.textContent = cnpjs.length ? cnpjs.length + ' CNPJ(s) monitorado(s)' : 'Nenhum CNPJ adicionado. Use o upload ou digite acima.';
+
+  if (!cnpjs.length) { tableEl.innerHTML = ''; return; }
+
+  var fundos = (typeof FUND_DATA !== 'undefined') ? FUND_DATA.fundos || {} : {};
+
+  var rows = cnpjs.map(function(cnpj) {
+    var f = fundos[cnpj];
+    if (!f) return { cnpj: cnpj, nome: '—', adm: '—', pl: null, comp: '—', encontrado: false };
+    var info = f.info || {};
+    var comps = f.competencias || {};
+    var keys = Object.keys(comps).sort();
+    var ult = keys.length ? comps[keys[keys.length - 1]] : null;
+    var nome = (info.nome && info.nome !== '0' && info.nome !== 'Única' && info.nome !== 'Subordinada') ? info.nome : 'Sem tag de nome';
+    return { cnpj: cnpj, nome: nome, adm: admNome(info.cnpj_adm), pl: ult ? ult.pl : null, comp: ult ? ult.competencia : '—', encontrado: true };
+  });
+
+  tableEl.innerHTML =
+    '<thead><tr><th>Fundo</th><th>CNPJ</th><th>Administradora</th><th class="num">PL</th><th>Comp.</th><th style="width:40px"></th></tr></thead><tbody>' +
+    rows.map(function(r) {
+      return '<tr' + (r.encontrado ? '' : ' style="opacity:.55"') + '>' +
+        '<td class="name">' + r.nome + '</td>' +
+        '<td class="mono">' + fmtCnpj(r.cnpj) + '</td>' +
+        '<td>' + r.adm + '</td>' +
+        '<td class="mono num">' + (r.pl ? 'R$ ' + BRL2.format(r.pl) : '—') + '</td>' +
+        '<td>' + r.comp + '</td>' +
+        '<td><button class="ft-remove-btn" data-cnpj="' + r.cnpj + '" title="Remover" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:1.1rem;line-height:1">&times;</button></td>' +
+      '</tr>';
+    }).join('') + '</tbody>';
+
+  tableEl.querySelectorAll('.ft-remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      ftRemoveCnpj(btn.dataset.cnpj);
+      renderFranklinMonitor();
+    });
+  });
+}
+
+function initFranklinMonitor() {
+  var csvBtn = document.getElementById('ft-csv-btn');
+  var csvInput = document.getElementById('ft-csv-input');
+  var addInput = document.getElementById('ft-cnpj-add');
+  var addBtn = document.getElementById('ft-add-btn');
+  var clearBtn = document.getElementById('ft-clear-btn');
+  if (!csvBtn) return;
+
+  csvBtn.addEventListener('click', function() { csvInput.click(); });
+
+  csvInput.addEventListener('change', function() {
+    var file = csvInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result || '';
+      var lines = text.split(/[\r\n,;]+/);
+      var added = 0;
+      lines.forEach(function(line) {
+        var clean = line.replace(/\D/g, '');
+        if (clean.length === 14 && ftAddCnpj(clean)) added++;
+      });
+      csvInput.value = '';
+      renderFranklinMonitor();
+    };
+    reader.readAsText(file);
+  });
+
+  addInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (ftAddCnpj(addInput.value)) { addInput.value = ''; renderFranklinMonitor(); }
+      else { addInput.style.borderColor = '#e44'; setTimeout(function() { addInput.style.borderColor = ''; }, 1000); }
+    }
+  });
+
+  addBtn.addEventListener('click', function() {
+    if (ftAddCnpj(addInput.value)) { addInput.value = ''; renderFranklinMonitor(); }
+    else { addInput.style.borderColor = '#e44'; setTimeout(function() { addInput.style.borderColor = ''; }, 1000); }
+  });
+
+  clearBtn.addEventListener('click', function() {
+    if (confirm('Remover todos os CNPJs monitorados?')) {
+      ftSaveCnpjs([]);
+      renderFranklinMonitor();
+    }
+  });
+
+  renderFranklinMonitor();
+}
+
+/* ============================================================
+   Documentos
+   ============================================================ */
+function renderDocs() {
+  var arquivos = [];
+  CNPJS.forEach(function(c) {
+    meses(c).forEach(function(mm) {
+      var inf = FD.informes[c][mm];
+      arquivos.push({ nome: c + '_InformeMensal_' + mm.replace('/', '-') + '.xml', cnpj: c, compt: mm, pl: inf.pl, fundo: curto((FD.meta[c] || {}).nome || c) });
+    });
+  });
+
+  var comps = ['07/2026', '08/2026', '09/2026'];
+  document.getElementById('doc-kpis').innerHTML = [
+    kpi('Arquivos processados', String(arquivos.length), 'XML · layout 6.6', '', 'Fonte: FNET'),
+    kpi('Fundos cobertos', String(CNPJS.length), 'de 5.016 classes de FIDC ativas', '', 'Fonte: CVM'),
+    kpi('Competência mais recente', '09/2026', 'entrega até 15/10/2026', '', 'Fonte: FNET'),
+    kpi('Informes faltantes', '1', 'Meridiano · 09/2026', 'down', 'Fonte: FNET')
+  ].join('');
+
+  document.getElementById('doc-cob-table').innerHTML =
+    '<thead><tr><th>Fundo</th><th>CNPJ</th>' + comps.map(function(c) { return '<th class="num">' + c + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    CNPJS.map(function(c) {
+      return '<tr><td class="name">' + curto((FD.meta[c] || {}).nome || c) + '</td><td class="mono">' + fmtCnpj(c) + '</td>' +
+        comps.map(function(mm) {
+          return '<td class="num">' + (FD.informes[c][mm] ? '<span class="badge ok">recebido</span>' : '<span class="badge neutral">—</span>') + '</td>';
+        }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+
+  document.getElementById('doc-table').innerHTML =
+    '<thead><tr><th>Arquivo</th><th>Fundo</th><th>Competência</th><th class="num">PL no informe</th><th>Status</th></tr></thead><tbody>' +
+    arquivos.sort(function(a, b) { return a.compt < b.compt ? 1 : -1; }).map(function(a) {
+      return '<tr><td class="name mono" style="font-size:12px">' + a.nome + '</td><td>' + a.fundo + '</td>' +
+        '<td class="mono">' + a.compt + '</td><td class="mono num">R$ ' + fmtMi(a.pl) + ' mi</td>' +
+        '<td><span class="badge ok">processado</span></td></tr>';
+    }).join('') + '</tbody>';
+}
+
+/* ============================================================
+   Rankings
+   ============================================================ */
+var rankSel = 'pl';
+function renderRank() {
+  var p = palette(), d = DEMO.rank[rankSel];
+  document.querySelectorAll('#rank-tabs .tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.rank === rankSel);
+    t.onclick = function() { rankSel = t.dataset.rank; renderRank(); };
+  });
+  document.getElementById('rank-title').textContent = d.titulo;
+  document.getElementById('rank-ref').textContent = 'top ' + d.nomes.length + ' · ' + d.unidade;
+
+  mk('ch-rank', {
+    type: 'bar',
+    data: { labels: d.nomes, datasets: [{ label: d.titulo + ' (' + d.unidade + ')', data: d.valores, backgroundColor: rankSel === 'inad' ? p[6] : p[0], maxBarThickness: 24 }] },
+    options: baseOpts({ indexAxis: 'y', plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: css('--grid'), borderDash: [4, 4], drawTicks: false } }, y: { grid: { display: false } } } })
+  });
+
+  var mostraPl = rankSel !== 'pl';
+  document.getElementById('rank-table').innerHTML =
+    '<thead><tr><th class="num">#</th><th>Fundo</th><th class="num">' + d.titulo + ' (' + d.unidade + ')</th>' +
+    (mostraPl ? '<th class="num">PL (R$ mi)</th>' : '') + '<th>Status</th></tr></thead><tbody>' +
+    d.nomes.map(function(n, i) {
+      var pl = DEMO.rank.pl.nomes.indexOf(n);
+      var plv = pl >= 0 ? BRL0.format(DEMO.rank.pl.valores[pl]) : '—';
+      var alerta = (rankSel === 'inad' && d.valores[i] > 12) || (rankSel === 'sub' && d.valores[i] < 10);
+      return '<tr><td class="mono num">' + (i + 1) + '</td><td class="name">' + n + '</td>' +
+        '<td class="mono num">' + BRL1.format(d.valores[i]) + (d.unidade === '%' ? '%' : '') + '</td>' +
+        (mostraPl ? '<td class="mono num">' + plv + '</td>' : '') +
+        '<td><span class="badge ' + (alerta ? 'warn' : 'ok') + '">' + (alerta ? 'Monitorar' : 'Regular') + '</span></td></tr>';
+    }).join('') + '</tbody>';
+}
+
+/* ============================================================
+   Ofertas
+   ============================================================ */
+function renderOfertas() {
+  var p = palette();
+  mk('ch-ofertas', {
+    type: 'bar',
+    data: { labels: DEMO.ofertasMeses, datasets: [{ label: 'Volume ofertado (R$ mi)', data: DEMO.ofertasVol, backgroundColor: p[0], maxBarThickness: 54 }] },
+    options: baseOpts({ plugins: { legend: { display: false } } })
+  });
+  document.getElementById('offer-grid').innerHTML = DEMO.ofertas.map(function(o) {
+    return '<div class="offer"><h3>' + o.nome + '</h3><p>' + o.serie + '</p>' +
+      '<div class="row"><span>Volume</span><b>R$ ' + o.vol + ' mi</b></div>' +
+      '<div class="row"><span>Taxa alvo</span><b>' + o.taxa + '</b></div>' +
+      '<div class="row"><span>Subordinação</span><b>' + o.sub + '</b></div>' +
+      '<div class="row"><span>Prazo</span><b>' + o.prazo + '</b></div>' +
+      '<div class="row"><span>Status</span><b>' + o.status + '</b></div></div>';
+  }).join('');
+}
+
+/* ============================================================
+   Comparador
+   ============================================================ */
+function renderComparador() {
+  var p = palette();
+  var dados = CNPJS.map(function(c) {
+    var inf = ultimo(c), m = metrics(inf), meta = FD.meta[c] || {};
+    return { cnpj: c, nome: curto(meta.nome || c), inf: inf, m: m };
+  });
+
+  var eixos = ['Porte (PL)', 'Qualidade (100-inad%)', 'Cobertura PDD', 'Subordinação', 'Liquidez ≤90d', 'Pulverização'];
+  function liq90(inf) {
+    var L = inf.liquidez || {}, tot = (L.imediata || 0) + (L['30'] || 0) + (L['60'] || 0) + (L['90'] || 0) + (L['180'] || 0) + (L['360'] || 0) + (L.mais360 || 0);
+    return tot ? ((L.imediata || 0) + (L['30'] || 0) + (L['60'] || 0) + (L['90'] || 0)) / tot * 100 : 0;
+  }
+  var maxPl = Math.max.apply(null, dados.map(function(d) { return d.inf.pl || 0; }));
+  mk('ch-cmp-radar', {
+    type: 'radar',
+    data: { labels: eixos, datasets: dados.map(function(d, i) {
+      return { label: d.nome.slice(0, 24),
+        data: [ (d.inf.pl / maxPl) * 100, Math.max(0, 100 - (d.m.inadPct || 0)), Math.min(100, (d.m.cobertura || 0) * 100),
+                Math.min(100, d.m.subordPct || 0), liq90(d.inf), Math.max(0, 100 - d.m.cedTop) ].map(function(v) { return Math.round(v * 10) / 10; }),
+        borderColor: p[i], backgroundColor: hexA(p[i], 0.1), pointBackgroundColor: p[i], borderWidth: 2, pointRadius: 3, fill: true };
+    }) },
+    options: baseOpts({
+      scales: { x: { display: false }, y: { display: false },
+        r: { min: 0, max: 100, angleLines: { color: css('--grid') }, grid: { color: css('--grid') },
+             pointLabels: { color: css('--text-dim'), font: { family: "'Space Grotesk', sans-serif", size: 11 } }, ticks: { display: false } } }
+    })
+  });
+
+  mk('ch-cmp-pl', {
+    type: 'bar',
+    data: { labels: dados.map(function(d) { return d.nome.slice(0, 22); }), datasets: [
+      { label: 'PL (R$ mi)', data: dados.map(function(d) { return mi(d.inf.pl); }), backgroundColor: p[0], maxBarThickness: 32 },
+      { label: 'Direitos creditórios (R$ mi)', data: dados.map(function(d) { return mi(d.m.dcTotal); }), backgroundColor: p[1], maxBarThickness: 32 },
+      { label: 'Inadimplentes (R$ mi)', data: dados.map(function(d) { return mi(d.m.inad); }), backgroundColor: p[6], maxBarThickness: 32 }
+    ] },
+    options: baseOpts({})
+  });
+
+  var linhas = [
+    ['Competência', function(d) { return d.inf.compt; }],
+    ['Condomínio', function(d) { return d.inf.condominio; }],
+    ['PL', function(d) { return 'R$ ' + fmtMi(d.inf.pl) + ' mi'; }],
+    ['PL médio', function(d) { return 'R$ ' + fmtMi(d.inf.pl_medio) + ' mi'; }],
+    ['Direitos creditórios', function(d) { return 'R$ ' + fmtMi(d.m.dcTotal) + ' mi'; }],
+    ['Inadimplência', function(d) { return fmtPct(d.m.inadPct); }],
+    ['PDD', function(d) { return 'R$ ' + fmtMi(d.m.pdd) + ' mi'; }],
+    ['Cobertura PDD', function(d) { return d.m.cobertura === null ? '—' : BRL2.format(d.m.cobertura) + 'x'; }],
+    ['Subordinação', function(d) { return fmtPct(d.m.subordPct); }],
+    ['Cotistas', function(d) { return BRL0.format(d.inf.cotistas_total || 0); }],
+    ['Concentração top cedentes', function(d) { return d.m.cedTop ? fmtPct(d.m.cedTop) : 'não divulgado'; }],
+    ['Aquisições no mês', function(d) { return 'R$ ' + fmtMi(d.inf.aquis_mes_vl) + ' mi'; }],
+    ['Amortizações no mês', function(d) { return 'R$ ' + fmtMi(d.inf.amortizacao) + ' mi'; }]
+  ];
+  document.getElementById('cmp-table').innerHTML =
+    '<thead><tr><th>Indicador</th>' + dados.map(function(d) { return '<th class="num">' + d.nome.slice(0, 30) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    linhas.map(function(l) {
+      return '<tr><td class="name">' + l[0] + '</td>' + dados.map(function(d) { return '<td class="mono num">' + l[1](d) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+}
+
+/* ============================================================
+   navegação
+   ============================================================ */
+var RENDER = {
+  radar: renderRadar, fundos: renderFundos, instituicoes: renderInst, cedentes: renderCedentes,
+  'franklin-fidcs': renderFranklin, documentos: renderDocs, rankings: renderRank, ofertas: renderOfertas, comparador: renderComparador
+};
+var paginaAtual = 'radar';
+
+var sidebar = document.getElementById('sidebar');
+var toggleBtn = document.getElementById('toggleBtn');
+var COLLAPSE_KEY = 'fidc-sidebar-collapsed';
+
+function applyCollapse(collapsed) { sidebar.classList.toggle('collapsed', collapsed); }
+
+try {
+  if (localStorage.getItem(COLLAPSE_KEY) === '1') applyCollapse(true);
+} catch (e) {}
+
+toggleBtn.addEventListener('click', function() {
+  var collapsed = !sidebar.classList.contains('collapsed');
+  applyCollapse(collapsed);
+  try { localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (e) {}
+  setTimeout(function() { Object.keys(charts).forEach(function(k) { charts[k].resize(); }); }, 260);
+});
+
+var THEME_KEY = 'fidc-theme';
+var themeBtn = document.getElementById('themeBtn');
+var root = document.documentElement;
+
+function applyTheme(theme) {
+  if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+  else root.removeAttribute('data-theme');
+}
+
+try {
+  var savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme) applyTheme(savedTheme);
+} catch (e) {}
+
+themeBtn.addEventListener('click', function() {
+  var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  RENDER[paginaAtual]();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', function() { window.location.href = 'login.html'; });
+
+var navItems = document.querySelectorAll('.nav-item[data-page]');
+var pages = document.querySelectorAll('.page');
+var crumbLabel = document.getElementById('crumbLabel');
+
+navItems.forEach(function(item) {
+  item.addEventListener('click', function() {
+    var target = item.getAttribute('data-page');
+    navItems.forEach(function(i) { i.classList.remove('active'); });
+    item.classList.add('active');
+    pages.forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('page-' + target).classList.add('active');
+    crumbLabel.textContent = item.querySelector('.nav-text').textContent;
+    paginaAtual = target;
+    if (RENDER[target]) RENDER[target]();
+  });
+});
+
+renderRadar();
+</script>
+
+</body>
+</html>
